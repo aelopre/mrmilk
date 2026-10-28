@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028090144', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028090652', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -437,6 +437,10 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
 .mm-pf-grid > .mm-why { grid-column: 1 / -1; }
+.mm-why-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .mm-why-top h2 { margin: 0; }
+.mm-why-tg { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; cursor: pointer; flex: none; }
+.mm-why-tg:hover { background: rgba(255,255,255,.12); } .mm-why-tg:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
+.mm-why:not(.open) li.more { display: none; } .mm-why-more { justify-self: start; font-size: 14px; }
 .mm-pf-proj tr.fp td { font-weight: 800; border-top: 1px solid var(--mm-line); color: var(--mm-gold); }
 .mm-pf-meff { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 12px; }
 .mm-pf-meff .l { color: var(--mm-mut); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; } .mm-pf-meff b { font-family: var(--mm-display); font-weight: 400; font-size: 28px; line-height: 1; } .mm-pf-meff b.mm-tier-soft { color: var(--mm-hit); } .mm-pf-meff b.mm-tier-tough { color: var(--mm-miss); }
@@ -2351,12 +2355,19 @@ dash.draw('pl_profile', (el) => {
   // --- why this projection
   const WY = (MM.ok('pl_why') || []).find((r) => r.player === x.player);
   if (WY && !x.out && !x.bye) {
-    const wc = h('div', 'mm-card mm-why'); wc.appendChild(h('h2', '', 'Why this projection'));
-    wc.appendChild(h('p', 'mm-why-head', WY.headline));
-    const ul = h('ul');
-    for (let i = 1; i <= 8; i++) { const t = WY['w' + i]; if (!t) continue; const li = h('li', 'tone-' + (WY['t' + i] || 'info'), t); ul.appendChild(li); }
-    wc.appendChild(ul);
+    const wc = h('div', 'mm-card mm-why');
+    const SHOW = 2; const items = []; for (let i = 1; i <= 8; i++) { const t = WY['w' + i]; if (t) items.push([t, WY['t' + i] || 'info']); }
+    const hd = h('div', 'mm-why-top'); hd.appendChild(h('h2', '', 'Why this projection'));
+    const tg = h('button', 'mm-why-tg'); tg.type = 'button';
+    const ul = h('ul'); items.forEach(([t, tone], k) => { const li = h('li', 'tone-' + tone + (k >= SHOW ? ' more' : ''), t); ul.appendChild(li); });
+    const set = (open) => { wc.classList.toggle('open', open); tg.textContent = open ? '−' : '+'; tg.setAttribute('aria-expanded', String(open)); tg.setAttribute('aria-label', open ? 'Show fewer reasons' : `Show all ${items.length} reasons`); cnt.textContent = open ? 'Show less' : `+${items.length - SHOW} more reason${items.length - SHOW === 1 ? '' : 's'}`; };
+    const cnt = h('button', 'mm-link mm-why-more'); cnt.type = 'button';
+    tg.onclick = cnt.onclick = () => set(!wc.classList.contains('open'));
+    if (items.length > SHOW) hd.appendChild(tg); wc.appendChild(hd);
+    wc.appendChild(h('p', 'mm-why-head', WY.headline)); wc.appendChild(ul);
+    if (items.length > SHOW) wc.appendChild(cnt);
     wc.appendChild(h('p', 'mm-why-key', 'Green pushes his projection up, red pulls it down, gold is a heads-up. Biggest factors first.'));
+    set(false);
     grid.appendChild(wc);
   }
   // --- matchup
