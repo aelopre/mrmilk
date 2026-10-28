@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027233125', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027233757', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -489,6 +489,15 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-why li.tone-up { --d: var(--mm-hit); } .mm-why li.tone-down { --d: var(--mm-miss); } .mm-why li.tone-warn { --d: var(--mm-gold); }
 .mm-why li.tone-warn { color: #FFE3A0; }
 .mm-why-key { margin: 0; font-size: 12px; color: var(--mm-mut); }
+
+/* clear (x) button inside search boxes */
+.mm-clearwrap { position: relative; display: block; }
+.mm-clearwrap input { padding-right: 38px !important; width: 100%; box-sizing: border-box; }
+.mm-clearwrap input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.mm-clear { all: unset; box-sizing: border-box; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: #C9D3E6; background: rgba(255,255,255,.08); font-size: 26px; font-weight: 600; line-height: 1; font-family: var(--mm-text); }
+.mm-clear:hover { color: var(--mm-txt); background: rgba(255,255,255,.08); }
+.mm-clear:focus-visible { outline: 2px solid var(--mm-cyan); }
+.mm-clear[hidden] { display: none; }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
@@ -2216,6 +2225,17 @@ dash.draw('pl_profile', (el) => {
   }
 });
 dash.draw('pl_probe', () => {});   // keeps the profile's datasets loaded while the Players tab is open
+</script>
+<script>
+/* clear (x) button for every search box: one tap empties it and closes the suggestions */
+document.querySelectorAll('input[type="search"]').forEach((inp) => {
+  const wrap = document.createElement('span'); wrap.className = 'mm-clearwrap'; inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'mm-clear'; b.setAttribute('aria-label', 'Clear search'); b.textContent = '×'; b.hidden = !inp.value; wrap.appendChild(b);
+  const sync = () => { b.hidden = !inp.value; };
+  inp.addEventListener('input', sync); inp.addEventListener('change', sync);
+  b.addEventListener('mousedown', (e) => e.preventDefault());
+  b.addEventListener('click', () => { inp.value = ''; sync(); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); });
+});
 </script>
 
 </div>
