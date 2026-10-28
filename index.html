@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028025752', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028030900', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -437,6 +437,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
 .mm-pf-grid > .mm-why { grid-column: 1 / -1; }
+.mm-lgrow td { color: var(--mm-mut); font-style: italic; border-top: 1px solid var(--mm-line); }
 /* search boxes: one custom clear (x) inside the box; hide the browser's own */
 .mm-clearwrap { position: relative; display: block; }
 .mm-clearwrap input[type="search"] { width: 100%; box-sizing: border-box; padding-right: 40px; }
@@ -777,6 +778,16 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
         </table>
       </div>
     </div>
+    <div class="mm-card" id="dvp-run-card" hidden>
+      <h2 data-draw="dvp_run_title" data-source="dvp_run">Run defense by lane</h2>
+      <p class="mm-note">Designed runs only (no scrambles, kneels or QB sneaks). Inside = up the middle or between the guards, off tackle = the tackle gaps, outside = around the end. Success = the run gained enough to keep the offense on schedule. Explosive = 10+ yards, stuffed = no gain or a loss. Light box = 6 or fewer defenders in the box. Short yardage = 3rd or 4th and 2 or less. Green = soft (good for the runner), red = stingy. Rank 1 = softest run defense by EPA per run. Click a header to sort.</p>
+      <div class="mm-scroll">
+        <table class="mm-table" id="dvp-run-table" data-source="dvp_run" data-row-key="id">
+          <thead><tr data-draw="dvp_run_head" data-source="dvp_run"></tr></thead>
+          <tbody data-draw="dvp_run_rows" data-source="dvp_run"></tbody>
+        </table>
+      </div>
+    </div>
     <div class="mm-card" id="dvp-chart-card">
       <h2 data-draw="dvp_chart_title" data-source="dvp">Allowed per game</h2>
       <p class="mm-note">All 32 defenses, per game played. The dashed line is the league average.</p>
@@ -806,7 +817,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
     </div>
-    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
   </section>
 </div>
 
@@ -1404,6 +1415,49 @@ dash.draw('dvp_cb_rows', (tb) => {
     MM.cell(tr, r.cb1_rank ? `#${r.cb1_rank}` : '—', 'num');
     tb.appendChild(tr);
   });
+});
+/* ---------- run defense by lane ---------- */
+const MMRD = (() => {
+  const COLS = [['all_epa', 'EPA / run', 'e'], ['all_ypc', 'YPC', 'y'], ['all_succ', 'Success', 'p'], ['in_ypc', 'Inside YPC', 'y'], ['tackle_ypc', 'Off-tackle YPC', 'y'], ['out_ypc', 'Outside YPC', 'y'],
+    ['all_expl', 'Explosive', 'p'], ['all_stuff', 'Stuffed', 'p'], ['light_ypc', 'YPC vs light box', 'y'], ['sy_conv', 'Short-yd conv', 'p'], ['ypg', 'Rush yds / g', 'n']];
+  const LOWGOOD = new Set(['all_stuff']);   // for these a LOW number is soft
+  const fmt = (t, v) => v == null ? '—' : t === 'p' ? d3.format('.0%')(v) : t === 'e' ? (v > 0 ? '+' : '') + d3.format('.2f')(v) : t === 'y' ? d3.format('.1f')(v) : d3.format('.0f')(v);
+  const state = () => {
+    const D = MM.ok('dvp_run'); if (!D) return null; const p = dash.params();
+    const lg = D.find((r) => r.id === 'LEAGUE') || {}; let rows = D.filter((r) => r.id !== 'LEAGUE');
+    const key = COLS.some((c) => c[0] === p.rd_sort) || p.rd_sort === 'team' ? p.rd_sort : 'all_epa';
+    const dir = p.rd_dir === 'asc' || p.rd_dir === 'desc' ? p.rd_dir : (key === 'team' ? 'asc' : LOWGOOD.has(key) ? 'asc' : 'desc');
+    rows = rows.slice().sort((a, b) => { const x = a[key], y = b[key]; const c = typeof x === 'string' ? x.localeCompare(y) : (x ?? -99) - (y ?? -99); return dir === 'asc' ? c : -c; });
+    return { rows, lg, key, dir, team: p.dvp_team || null, wk: (D[0] || {}).thru_week };
+  };
+  const th = (tr, s, text, cls, key) => {
+    const h = document.createElement('th'); if (cls) h.className = cls; const on = s.key === key;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mm-sort' + (on ? ' on' : ''); b.textContent = text + (on ? (s.dir === 'asc' ? ' ▲' : ' ▼') : '');
+    h.setAttribute('aria-sort', on ? (s.dir === 'asc' ? 'ascending' : 'descending') : 'none'); b.title = 'Sort by ' + text.toLowerCase();
+    b.onclick = () => dash.setParams({ rd_sort: key, rd_dir: on ? (s.dir === 'asc' ? 'desc' : 'asc') : null }); h.appendChild(b); tr.appendChild(h);
+  };
+  // tier vs league: soft = gives up clearly more than average
+  const tier = (k, v, lg) => { if (v == null || lg[k] == null) return ''; const rel = (v - lg[k]) / (Math.abs(lg[k]) || 1) * (LOWGOOD.has(k) ? -1 : 1); const thr = k === 'all_epa' ? 0.5 : 0.1; return rel >= thr ? 'mm-tier-soft' : rel <= -thr ? 'mm-tier-tough' : ''; };
+  return { COLS, fmt, state, th, tier };
+})();
+dash.draw('dvp_run_title', (el) => { const s = MMRD.state(); const card = document.getElementById('dvp-run-card'); if (card) card.hidden = (dash.params().dvp_pos || 'QB') !== 'RB'; el.textContent = s ? `Run defense by lane, Weeks 1–${s.wk}` : 'Run defense by lane'; });
+dash.draw('dvp_run_head', (tr) => {
+  const s = MMRD.state(); tr.replaceChildren(); if (!s) return;
+  const t0 = document.createElement('th'); t0.className = 'num'; t0.textContent = 'Rank'; tr.appendChild(t0);
+  MMRD.th(tr, s, 'Defense', '', 'team');
+  MMRD.COLS.forEach(([k, l]) => MMRD.th(tr, s, l, 'num' + (['all_succ', 'all_stuff', 'light_ypc', 'ypg'].includes(k) ? ' mm-hide-sm' : ''), k));
+});
+dash.draw('dvp_run_rows', (tb) => {
+  const s = MMRD.state(); tb.replaceChildren(); if (!s) return;
+  s.rows.forEach((r) => {
+    const tr = document.createElement('tr'); tr.dataset.key = r.id; if (s.team && r.team === s.team) tr.classList.add('mm-hl');
+    MMD.rank(tr, r.all_epa_rank); MMD.teamCell(tr, r.team);
+    MMRD.COLS.forEach(([k, l, t]) => { const td = MM.cell(tr, MMRD.fmt(t, r[k]), 'num ' + MMRD.tier(k, r[k], s.lg) + (['all_succ', 'all_stuff', 'light_ypc', 'ypg'].includes(k) ? ' mm-hide-sm' : ''));
+      if (r[k + '_rank'] != null) { const sm = document.createElement('small'); sm.textContent = r[k + '_rank']; td.appendChild(sm); } });
+    tb.appendChild(tr);
+  });
+  const tr = document.createElement('tr'); tr.className = 'mm-lgrow'; MM.cell(tr, ''); MM.cell(tr, 'League avg');
+  MMRD.COLS.forEach(([k, l, t]) => MM.cell(tr, MMRD.fmt(t, s.lg[k]), 'num' + (['all_succ', 'all_stuff', 'light_ypc', 'ypg'].includes(k) ? ' mm-hide-sm' : ''))); tb.appendChild(tr);
 });
 dash.draw('dvp_team_sel', (sel) => {
   const s = MMD.state(); sel.replaceChildren(); if (!s) return;
