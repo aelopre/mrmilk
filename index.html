@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028102859', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028103305', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -2415,7 +2415,7 @@ dash.draw('pl_profile', (el) => {
     const mine = TRK.filter((r) => r.player === x.player);
     if (mine.length) {
       const sec = h('div', 'mm-trk'); sec.appendChild(h('h3', '', 'Our track record'));
-      sec.appendChild(h('p', 'mm-note', 'Every week we lock our projection before kickoff and never change it afterward. Once the game is played, the real result goes next to it, hits and misses alike.'));
+      sec.appendChild(h('p', 'mm-note', 'Every week our projection is locked before kickoff and never changed afterward. Once the game is played, the real result goes next to it, hits and misses alike. Tracking starts in Week 7.'));
       const main = x.pos === 'QB' ? 'Pass Yds' : x.pos === 'RB' ? 'Rush Yds' : 'Rec Yds';
       const opts = ['Fantasy pts', main, x.pos === 'QB' ? 'Pass TD' : 'Receptions'].filter((st, i, a) => a.indexOf(st) === i && mine.some((r) => r.stat === st));
       if (!MMP.trkStat || MMP.trkPlayer !== x.player) { MMP.trkStat = 'Fantasy pts'; MMP.trkPlayer = x.player; }
@@ -2431,6 +2431,7 @@ dash.draw('pl_profile', (el) => {
         rows.forEach((r) => {
           const tr = h('tr'); tr.append(h('td', '', String(r.week)), h('td', '', r.opp), h('td', 'num g', fmtv(st, r.proj)));
           if (r.status === 'pending') { tr.append(h('td', 'num mm-trk-wait', 'TBD'), h('td', 'num', '—')); }
+          else if (r.status === 'nofp') { tr.children[2].textContent = '—'; tr.children[2].className = 'num mm-trk-wait'; tr.append(h('td', 'num', fmtv(st, r.actual)), h('td', 'num', '—')); }
           else if (r.status === 'dnp') { tr.append(h('td', 'num mm-trk-wait', 'didn’t play'), h('td', 'num', '—')); }
           else {
             const d = r.actual - r.proj; const tol = Math.max(TOL[st] || 2, Math.abs(r.proj) * 0.25);
@@ -2441,12 +2442,17 @@ dash.draw('pl_profile', (el) => {
           tb.appendChild(tr);
         });
         t.appendChild(tb); tw.appendChild(t);
+        sumBox.replaceChildren();
+        const unit = st === 'Fantasy pts' ? 'PPR points' : st.endsWith('Yds') ? 'yards' : st === 'Receptions' ? 'catches' : st === 'Pass TD' ? 'TDs' : '';
+        const dn = rows.filter((r) => r.status === 'final');
+        if (dn.length) { const e = dn.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / dn.length; sumBox.appendChild(h('p', 'mm-trk-sum', `For him we've missed by ${fmtv(st, e)} ${unit} per game on average over ${dn.length} game${dn.length === 1 ? '' : 's'}.`)); }
+        const wks = [...new Set(TRK.filter((r) => r.stat === st && r.status === 'final').map((r) => r.week))].sort((a, b) => b - a);
+        if (wks.length) { const W = TRK.filter((r) => r.stat === st && r.status === 'final' && r.week === wks[0]); const e = W.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / W.length;
+          sumBox.appendChild(h('p', 'mm-trk-sum', `Across all ${W.length} players we projected for ${st === 'Fantasy pts' ? 'fantasy points' : st} in Week ${wks[0]}, we missed by ${fmtv(st, e)} ${unit} on average.`)); }
+        if (rows.some((r) => r.status === 'nofp')) sumBox.appendChild(h('p', 'mm-note', 'Week 7 and earlier: we didn\u2019t project fantasy points or touchdowns yet, so only his actual score is shown. Switch to a stat above to see how those projections did.'));
       };
-      draw(); sec.append(chips, tw);
-      const done = mine.filter((r) => r.stat === 'Fantasy pts' && r.status === 'final');
-      if (done.length) { const e = done.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / done.length; sec.appendChild(h('p', 'mm-trk-sum', `For him we've missed by ${e.toFixed(1)} PPR points per game on average over ${done.length} game${done.length === 1 ? '' : 's'}.`)); }
-      const ALL = TRK.filter((r) => r.player === '__ALL__').sort((a, b) => b.week - a.week)[0];
-      if (ALL) sec.appendChild(h('p', 'mm-trk-sum', `Across all ${ALL.n} players in Week ${ALL.week}, we missed by ${ALL.mae.toFixed(1)} PPR points on average, and ${Math.round(ALL.within5 * 100)}% landed within 5 points of our number.`));
+      const sumBox = h('div', 'mm-trk-sumbox');
+      draw(); sec.append(chips, tw, sumBox);
       sec.appendChild(h('p', 'mm-note', 'Proj = what we projected. Diff = actual minus projected (+ means he beat our number). Green = within about 25% of our number. Red = off by more than about 50%.'));
       c.appendChild(sec);
     }
