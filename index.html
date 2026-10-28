@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028031728', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028090144', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -437,6 +437,9 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
 .mm-pf-grid > .mm-why { grid-column: 1 / -1; }
+.mm-pf-proj tr.fp td { font-weight: 800; border-top: 1px solid var(--mm-line); color: var(--mm-gold); }
+.mm-pf-meff { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 12px; }
+.mm-pf-meff .l { color: var(--mm-mut); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; } .mm-pf-meff b { font-family: var(--mm-display); font-weight: 400; font-size: 28px; line-height: 1; } .mm-pf-meff b.mm-tier-soft { color: var(--mm-hit); } .mm-pf-meff b.mm-tier-tough { color: var(--mm-miss); }
 .mm-lgrow td { color: var(--mm-mut); font-style: italic; border-top: 1px solid var(--mm-line); }
 /* search boxes: one custom clear (x) inside the box; hide the browser's own */
 .mm-clearwrap { position: relative; display: block; }
@@ -470,6 +473,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-cov .mix .bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--mm-mut) var(--w), transparent var(--w)); opacity: .55; }
 .mm-pf-cov .mix .r.me .n, .mm-pf-cov .mix .r.me .v { color: var(--mm-txt); font-weight: 700; } .mm-pf-cov .mix .r.me .bar { background: linear-gradient(90deg, var(--mm-gold) var(--w), transparent var(--w)); opacity: 1; }
 .mm-pf-cov .cv-src { margin: 0; color: var(--mm-mut); font-size: 12px; }
+.mm-pf-cov .cv-warn { margin: 0; font-size: 14px; color: var(--mm-txt); border-left: 3px solid var(--mm-gold); padding: 4px 0 4px 10px; background: rgba(255,190,46,.06); border-radius: 0 6px 6px 0; }
 .mm-pf-run .cv-eff { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .mm-pf-run .mix .r { grid-template-columns: minmax(0, 8em) 1fr 6.2em; }
 .mm-pf-run .mix .v { white-space: nowrap; }
@@ -2116,8 +2120,8 @@ window.MMP = (() => {
   const MAIN = { QB: 'Pass Yds', RB: 'Rush Yds', WR: 'Rec Yds', TE: 'Rec Yds' };
   const ORDER = ['Pass Yds', 'Pass Att', 'Completions', 'Pass TD', 'Rush Yds', 'Rush Att', 'Receptions', 'Rec Yds', 'Targets'];
   // display order per position, shared by the props table and the projections table
-  const POSORD = { QB: ['Pass Att', 'Completions', 'Pass Yds', 'Pass TD', 'INT', 'Passer rating', 'Rush Att', 'Rush Yds'], RB: ['Rush Att', 'Rush Yds', 'Targets', 'Receptions', 'Rec Yds'],
-    WR: ['Targets', 'Receptions', 'Rec Yds', 'Rush Att', 'Rush Yds'], TE: ['Targets', 'Receptions', 'Rec Yds', 'Rush Att', 'Rush Yds'] };
+  const POSORD = { QB: ['Pass Att', 'Completions', 'Pass Yds', 'Pass TD', 'INT', 'Passer rating', 'Rush Att', 'Rush Yds', 'Rush TD', 'Anytime TD', 'Fantasy pts'], RB: ['Rush Att', 'Rush Yds', 'Rush TD', 'Targets', 'Receptions', 'Rec Yds', 'Rec TD', 'Anytime TD', 'Fantasy pts'],
+    WR: ['Targets', 'Receptions', 'Rec Yds', 'Rec TD', 'Rush Att', 'Rush Yds', 'Rush TD', 'Anytime TD', 'Fantasy pts'], TE: ['Targets', 'Receptions', 'Rec Yds', 'Rec TD', 'Rush Att', 'Rush Yds', 'Rush TD', 'Anytime TD', 'Fantasy pts'] };
   const rank = (pos, st) => { const o = POSORD[pos] || ORDER; const i = o.indexOf(st); return i < 0 ? 99 : i; };
   const LOGK = { 'Pass Yds': 'pyd', 'Pass Att': 'att', Completions: 'cmp', 'Pass TD': 'ptd', 'Rush Yds': 'ryd', 'Rush Att': 'car', Receptions: 'rec', 'Rec Yds': 'yd', Targets: 'tgt' };
   const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -2331,14 +2335,16 @@ dash.draw('pl_profile', (el) => {
     }
     const tierTxt = { soft: 'soft', tough: 'tough', average: 'about average' };
     const opp = PJ[0].opp; const ot = (by['Pass Yds'] || by['Rec Yds'] || by['Rush Yds'] || PJ[0]).opp_tier;
-    const c = card('Projections', `Every stat we project. Neutral = against a league-average defense. vs ${opp} = his real matchup this week (${opp}'s defense is ${tierTxt[ot] || 'about average'} for his main stat). Effect = how much that defense and coverage move him.`);
+    const c = card('Projections', `Every stat we project. Neutral = against a league-average defense. vs ${opp} = his real matchup this week (${opp}'s defense is ${tierTxt[ot] || 'about average'} for his main stat). Effect = how much that defense and coverage move him. TDs are expected touchdowns (0.25 = one TD in four games like this). Fantasy points use full PPR: 1 per catch, 0.1 per rushing or receiving yard, 0.04 per passing yard, 6 per rushing or receiving TD, 4 per passing TD, −2 per interception.`);
     const t = h('table', 'mm-table mm-pf-proj'); const hr = h('tr'); [['Stat', ''], ['Neutral', 'num'], [`vs ${opp}`, 'num k'], ['Effect', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
     const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
-    const fmt = (st, v) => (st.endsWith('Yds') || st === 'Passer rating' ? d3.format('.0f')(v) : st === 'Pass TD' || st === 'INT' ? d3.format('.2f')(v) : d3.format('.1f')(v));
+    const fmt = (st, v) => (st.endsWith('Yds') || st === 'Passer rating' ? d3.format('.0f')(v) : st === 'Anytime TD' ? d3.format('.0%')(v) : st.endsWith(' TD') || st === 'INT' ? d3.format('.2f')(v) : d3.format('.1f')(v));
     (ORD[x.pos] || []).filter((st) => by[st]).forEach((st) => {
-      const r = by[st]; const tr = h('tr'); tr.appendChild(h('td', '', st));
+      const r = by[st]; const tr = h('tr', st === 'Fantasy pts' ? 'fp' : ''); tr.appendChild(h('td', '', st === 'Fantasy pts' ? 'Fantasy pts (PPR)' : st === 'Anytime TD' ? 'Anytime TD chance' : st));
       const eff = r.neutral > 0 ? r.week / r.neutral - 1 : 0;
-      tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num g', fmt(st, r.week)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), Math.abs(eff) < 0.005 ? '—' : `${eff > 0 ? '+' : '−'}${Math.abs(eff * 100).toFixed(0)}%`)); tb.appendChild(tr);
+      const isTd = st.endsWith(' TD') && st !== 'Anytime TD'; const dlt = r.week - r.neutral;
+      const effTxt = isTd ? (Math.abs(dlt) < 0.005 ? '—' : `${dlt > 0 ? '+' : '−'}${Math.abs(dlt).toFixed(2)}`) : (Math.abs(eff) < 0.005 ? '—' : `${eff > 0 ? '+' : '−'}${Math.abs(eff * 100).toFixed(0)}%`);
+      tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num g', fmt(st, r.week)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), effTxt)); tb.appendChild(tr);
     });
     t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); c.appendChild(sw);
   }
@@ -2362,6 +2368,15 @@ dash.draw('pl_profile', (el) => {
       const big = h('div', 'big'); const rk = dr.fpts_rank; const v = h('b', MMD.tier(rk), ord(rk)); big.append(v, h('span', 'mm-note', `${rk <= 16 ? 'softest' : 'toughest'} vs ${x.pos}s: ${f1(dr.fpts)} fantasy pts allowed per game (${dr.fpts_vs_avg >= 0 ? '+' : '−'}${pc(Math.abs(dr.fpts_vs_avg))} vs average).`));
       if (rk > 16) v.textContent = ord(33 - rk);
       box.appendChild(big);
+      try {
+        const WYm = (MM.ok('pl_why') || []).find((r) => r.player === x.player);
+        if (WYm && WYm.m_eff != null && !x.out && !x.bye) {
+          const v = WYm.m_eff; const pf = `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(1)}%`;
+          const eb = h('div', 'mm-pf-meff'); eb.append(h('span', 'l', `Effect on his ${WYm.m_noun} projection`), h('b', v >= 0.005 ? 'mm-tier-soft' : v <= -0.005 ? 'mm-tier-tough' : '', pf));
+          box.appendChild(eb);
+          box.appendChild(h('p', 'mm-note', `${x.opp} allows ${Math.round(WYm.m_allows)} ${WYm.m_noun} a game to ${x.pos}s (league ${Math.round(WYm.m_lg)}). The rank above is fantasy points, which also counts touchdowns${x.pos === 'RB' ? ' and receiving' : ''}, so the two can point different ways.`));
+        }
+      } catch (e) { /* effect line optional */ }
       try {
         const rep = MMSC.build(opp, D, T); const items = rep ? rep.items.filter((it) => !it.pos || it.pos === x.pos).slice(0, 3) : [];
         if (items.length) { const ul = h('ul'); items.forEach((it) => { const li = h('li', it.cls); li.innerHTML = it.html; ul.appendChild(li); }); box.appendChild(ul); }
@@ -2401,6 +2416,11 @@ dash.draw('pl_profile', (el) => {
         chip('Coverage', CB.eff_cov_yds); chip('Scheme', CB.eff_sch_yds); chip('Net', CB.eff_tot_yds);
         c.appendChild(ef);
         if (CB.proj_yds != null) c.appendChild(h('p', 'mm-note cv-exp', `${CB.proj_yds_base} → ${CB.proj_yds} receiving yards${CB.proj_rec != null ? ` (receptions ${CB.proj_rec_base} → ${CB.proj_rec}, ${pf(CB.eff_tot_rec)})` : ''}. Coverage = the defenders likely to cover him, graded on yards allowed, EPA allowed in their scheme and separation allowed. Scheme = man/zone fit, alignment, pressure and explosives. The coverage effect weighs every defender likely to cover him by snaps and alignment, not just ${cbn}, so it can point a different way than the tag.`));
+      }
+      if (CB.eff_tot_yds != null) {
+        if (CB.cov_mix) c.appendChild(h('p', 'mm-note cv-exp', `Who the model expects on him, by share of his routes: ${CB.cov_mix}.`));
+        const disagree = (CB.matchup === 'Favorable' && CB.eff_cov_yds <= -0.01) || (CB.matchup === 'Tough' && CB.eff_cov_yds >= 0.01);
+        if (disagree) c.appendChild(h('p', 'cv-warn', `Why the tag and the number disagree: the ${CB.matchup.toLowerCase()} tag rates only ${cbn}, by catch rate allowed. The coverage effect grades everyone above on yards and EPA allowed per target and how often they let receivers get open, and as a group they come out ${CB.eff_cov_yds < 0 ? 'better' : 'worse'} than average.`));
       }
       // why the tag
       const ws = [1, 2, 3, 4, 5, 6].map((i) => [CB['cbw' + i], CB['cbt' + i]]).filter((w) => w[0]);
@@ -2442,10 +2462,10 @@ dash.draw('pl_profile', (el) => {
         tr.append(h('td', '', l), h('td', 'num', `${pc(RS['mix_' + k])}`), h('td', 'num ' + (d >= 0.3 ? 'mm-tier-soft' : d <= -0.3 ? 'mm-tier-tough' : ''), `${RS[`opp_${k}_ypc`].toFixed(1)} ypc${RS[`opp_${k}_rank`] ? ` · ${ord(RS[`opp_${k}_rank`])}` : ''}`), h('td', 'num', RS[`lg_${k}_ypc`].toFixed(1)));
         tb.appendChild(tr); });
       t.appendChild(tb); c.appendChild(t);
-      c.appendChild(h('p', 'mm-note cv-exp', `${x.opp} allows ${RS.opp_all_ypc.toFixed(1)} yds/carry overall (league ${RS.lg_all_ypc.toFixed(1)}); that part is already in his matchup. This card is about fit: ${RS.note.replace(/^runs mostly [^;]*; /, '')}.`));
+      c.appendChild(h('p', 'mm-note cv-exp', `${x.opp} allows ${RS.opp_all_ypc.toFixed(1)} yds/carry overall (league ${RS.lg_all_ypc.toFixed(1)}). That's already in his projection through the Matchup card. This card only asks whether his style sends him to ${x.opp}'s softer or tougher lanes more than a typical back: ${RS.note.replace(/^his main runs are [^.]*\. /i, '').replace(/^./, (m) => m.toLowerCase()).replace(/\.$/, '')}.`));
       const ef = h('div', 'cv-eff'); const chip = (l, v) => { const d = h('div', 'cv-e'); d.append(h('span', '', l), h('b', cl(v), pf(v))); ef.appendChild(d); };
       chip('Run-style fit', RS.eff_run); chip('All scheme', RS.eff_scheme); c.appendChild(h('div', 'cv-h', 'Effect on his rushing-yards projection')); c.appendChild(ef);
-      c.appendChild(h('p', 'cv-src', 'All scheme also counts the defense\'s stuff rate and explosive runs allowed. Rank 1 = softest lane in the league.'));
+      c.appendChild(h('p', 'cv-src', 'All scheme also counts how often the defense stuffs runs and allows explosive plays. Rank 1 = softest lane in the league.'));
     }
   } catch (e) { /* run card is optional */ }
   // --- 10K sim (when his game has been simulated)
