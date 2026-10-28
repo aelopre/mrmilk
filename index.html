@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028115618', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028125050', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_proj_model_only", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -438,15 +438,33 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
 .mm-pf-grid > .mm-why { grid-column: 1 / -1; }
 .cv-whywrap { display: grid; gap: 8px; } .cv-whyhd { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.cv-tg { width: 30px; height: 30px; font-size: 20px; } .cv-whywrap:not(.open) li.more { display: none; }
+.mm-why-tg.cv-tg { width: 30px; height: 30px; min-width: 30px; max-width: 30px; flex-basis: 30px; font-size: 20px; } .cv-whywrap:not(.open) li.more { display: none; }
 .mm-why-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; } .mm-why-top h2 { margin: 0; }
-.mm-why-tg { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; cursor: pointer; flex: none; }
+.mm-why-tg { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 34px; height: 34px; min-width: 34px; max-width: 34px; padding: 0; margin: 0; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; font-family: Arial, Helvetica, sans-serif; cursor: pointer; flex: 0 0 34px; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .mm-why-tg:hover { background: rgba(255,255,255,.12); } .mm-why-tg:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
 .mm-why:not(.open) li.more { display: none; } .mm-why-more { justify-self: start; font-size: 14px; }
 .mm-trk, .mm-cons { min-width: 0; max-width: 100%; box-sizing: border-box; } .mm-trk .mm-scroll { max-width: 100%; overflow-x: auto; }
 .mm-trk-t { width: 100%; table-layout: fixed; } .mm-trk-t th, .mm-trk-t td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 6px; padding-right: 6px; }
 .mm-trk-t th:nth-child(1) { width: 12%; } .mm-trk-t th:nth-child(2) { width: 18%; } .mm-trk-t th:nth-child(3) { width: 20%; } .mm-trk-t th:nth-child(4) { width: 28%; } .mm-trk-t th:nth-child(5) { width: 22%; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (max-width: 520px) {
+  .mm-pf-proj { width: 100%; table-layout: fixed; font-size: 13.5px; }
+  .mm-pf-proj th, .mm-pf-proj td { padding-left: 4px; padding-right: 4px; }
+  .mm-pf-proj th { font-size: 10.5px; letter-spacing: .04em; }
+  .mm-pf-proj th:nth-child(1) { width: 31%; } .mm-pf-proj th:nth-child(2), .mm-pf-proj th:nth-child(3), .mm-pf-proj th:nth-child(4), .mm-pf-proj th:nth-child(5) { width: 17.25%; }
+  .mm-pf-proj td:first-child { white-space: normal; line-height: 1.15; }
+}
+.mm-pf-proj td.g.mkt { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.mm-fin-note { margin-top: 8px; } .mm-fin-x td { font-size: 12.5px; opacity: .85; padding-top: 2px; padding-bottom: 6px; white-space: normal; }
+.mm-range { margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.03); }
+.mm-range-k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.mm-range-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; text-align: center; }
+.mm-range-c .v { font-size: 22px; font-weight: 800; } .mm-range-c .l { font-size: 12px; opacity: .75; }
+.mm-range-c.lo .v { color: #e05a5a; } .mm-range-c.mid .v { color: var(--mm-gold); } .mm-range-c.hi .v { color: #3fbf7f; }
+.mm-range-bar { position: relative; height: 10px; margin: 10px 2px 4px; border-radius: 5px; background: rgba(255,255,255,.06); }
+.mm-range-bar .f { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, rgba(224,90,90,.55), rgba(240,181,74,.6), rgba(63,191,127,.6)); }
+.mm-range-bar .m, .mm-range-bar .a { position: absolute; top: -3px; width: 3px; height: 16px; margin-left: -1.5px; border-radius: 2px; background: var(--mm-gold); }
+.mm-range-bar .a { background: #fff; opacity: .8; }
 .mm-trk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .mm-trk-top h3 { margin: 0; } .mm-trk:not(.open) .mm-trk-body { display: none; } .mm-trk-body { margin-top: 6px; }
 .mm-trk { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--mm-line); } .mm-trk h3 { margin: 0 0 4px; font-size: 16px; }
 .mm-trk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
@@ -457,12 +475,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .mm-cons { margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--mm-line); border-left: 4px solid var(--mm-line); background: rgba(255,255,255,.03); }
 .mm-cons.tone-good { border-left-color: var(--mm-gold); } .mm-cons.tone-bad { border-left-color: var(--mm-cyan); }
 .mm-cons-k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; } .mm-cons-v { font-weight: 700; margin-top: 2px; } .mm-cons-s { font-size: 13px; opacity: .85; margin-top: 2px; }
-.mm-cons-card { margin-bottom: 14px; } .mm-cons-card:not(.open) .mm-cons-grid, .mm-cons-card:not(.open) > .mm-note { display: none; }
-.mm-cons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } @media (max-width: 640px) { .mm-cons-grid { grid-template-columns: 1fr; } }
-.mm-cons-col h3 { margin: 4px 0 6px; font-size: 14px; } .mm-cons-col.higher h3 { color: var(--mm-gold); } .mm-cons-col.lower h3 { color: var(--mm-cyan); }
-.mm-cons-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; width: 100%; text-align: left; padding: 7px 8px; margin-bottom: 4px; border-radius: 8px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.03); color: inherit; font: inherit; cursor: pointer; }
-.mm-cons-row:hover { background: rgba(255,255,255,.08); } .mm-cons-row:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
-.mm-cons-row .n { font-weight: 700; } .mm-cons-row .p { font-size: 12px; opacity: .7; text-align: right; } .mm-cons-row .m { grid-column: 1 / -1; font-size: 12.5px; opacity: .85; }
 .mm-pf-proj tr.fp td { font-weight: 800; border-top: 1px solid var(--mm-line); color: var(--mm-gold); }
 .mm-pf-meff { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 12px; }
 .mm-pf-meff .l { color: var(--mm-mut); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; } .mm-pf-meff b { font-family: var(--mm-display); font-weight: 400; font-size: 28px; line-height: 1; } .mm-pf-meff b.mm-tier-soft { color: var(--mm-hit); } .mm-pf-meff b.mm-tier-tough { color: var(--mm-miss); }
@@ -954,9 +966,6 @@ window.MM = (() => {
 
 <script>
 /* ---------- header + top picks ---------- */
-dash.draw('tp_right', MM.text('tp_weeks', 'right'));
-dash.draw('tp_wrong', MM.text('tp_weeks', 'wrong'));
-dash.draw('gb_win_head', MM.text('sim_games', 'home_win', MM.pct));
 dash.draw('thu_rows', (tb) => MM.rows(tb, 'thu_picks', (tr, r) => {
   tr.dataset.key = r.rank;
   MM.cell(tr, r.player); MM.team(tr, r.team); MM.cell(tr, r.stat); MM.cell(tr, r.pick); MM.cell(tr, MM.fmtLine(r.line), 'num');
@@ -1052,14 +1061,6 @@ dash.draw('scorer_rows', (tb) => MM.rows(tb, 'sim_scorers', (tr, r) => {
   tr.dataset.key = r.player;
   MM.cell(tr, r.player); MM.team(tr, r.team); MM.bar(tr, r.anytime_td, 0.6, r.anytime_td >= 0.3); MM.cell(tr, MM.pct(r.first_td), 'num'); MM.cell(tr, MM.pct(r.two_plus), 'num mm-hide-sm');
 }, (r) => r.anytime_td >= 0.05));
-dash.draw('box_score_car', MM.text('sim_games', 'away_avg', d3.format('.1f')));
-dash.draw('box_pass_car', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, r.cmp_att, 'num'); MM.cell(tr, String(r.pyd), 'num'); MM.cell(tr, String(r.ptd), 'num'); MM.cell(tr, String(r.int), 'num'); }, (r) => r.team === 'CAR' && r.section === 'Passing'));
-dash.draw('box_rush_car', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, String(r.car), 'num'); MM.cell(tr, String(r.ryd), 'num'); MM.cell(tr, d3.format('.1f')(r.ypc), 'num'); MM.cell(tr, MM.pct(r.rtd), 'num'); }, (r) => r.team === 'CAR' && r.section === 'Rushing'));
-dash.draw('box_rec_car', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, String(r.tgt), 'num'); MM.cell(tr, String(r.rec), 'num'); MM.cell(tr, String(r.yd), 'num'); MM.cell(tr, MM.pct(r.td), 'num'); }, (r) => r.team === 'CAR' && r.section === 'Receiving'));
-dash.draw('box_score_gb', MM.text('sim_games', 'home_avg', d3.format('.1f')));
-dash.draw('box_pass_gb', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, r.cmp_att, 'num'); MM.cell(tr, String(r.pyd), 'num'); MM.cell(tr, String(r.ptd), 'num'); MM.cell(tr, String(r.int), 'num'); }, (r) => r.team === 'GB' && r.section === 'Passing'));
-dash.draw('box_rush_gb', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, String(r.car), 'num'); MM.cell(tr, String(r.ryd), 'num'); MM.cell(tr, d3.format('.1f')(r.ypc), 'num'); MM.cell(tr, MM.pct(r.rtd), 'num'); }, (r) => r.team === 'GB' && r.section === 'Rushing'));
-dash.draw('box_rec_gb', (tb) => MM.rows(tb, 'sim_box', (tr, r) => { tr.dataset.key = r.id; MM.cell(tr, r.player, 'mm-name'); MM.cell(tr, r.pos, 'mm-pos mm-pos-' + String(r.pos).toLowerCase()); MM.cell(tr, String(r.tgt), 'num'); MM.cell(tr, String(r.rec), 'num'); MM.cell(tr, String(r.yd), 'num'); MM.cell(tr, MM.pct(r.td), 'num'); }, (r) => r.team === 'GB' && r.section === 'Receiving'));
 
 </script>
 
@@ -2265,29 +2266,6 @@ dash.draw('pl_pos_sel', (sel) => {
   sel.replaceChildren(); [['', 'All positions'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']].forEach(([v, l]) => sel.appendChild(new Option(l, v)));
   sel.value = dash.params().pl_pos || ''; sel.onchange = () => dash.setParams({ pl_pos: sel.value || null });
 });
-dash.draw('pl_cons_card', (el) => {
-  const d = MM.ok('pl_cons'); el.replaceChildren(); if (!d) return; const h = MMP.h; const p = dash.params();
-  const top = h('div', 'mm-why-top'); top.appendChild(h('h2', '', 'Where we disagree with the experts'));
-  const tg = h('button', 'mm-why-tg'); tg.type = 'button'; top.appendChild(tg); el.appendChild(top);
-  el.appendChild(h('p', 'mm-note', 'Players where our PPR projection differs most from the expert consensus this week. Higher = we like him more than the experts do. QBs compare projected points; RB/WR/TE compare overall ranks. A disagreement is not a pick on its own; it just shows where to look closer. Tap a name to open his profile.'));
-  const body = h('div', 'mm-cons-grid');
-  const pool = d.filter((r) => r.big && (!p.pl_team || r.team === p.pl_team) && (!p.pl_pos || r.pos === p.pl_pos));
-  const col = (side, title) => {
-    const w = h('div', 'mm-cons-col ' + side); w.appendChild(h('h3', '', title));
-    const sc = (r) => r.kind === 'pts' ? Math.abs(r.gap) * 8 : Math.abs(r.gap) * (r.cons_rk <= 60 || r.our_rk <= 60 ? 1.5 : 1); const rows = pool.filter((r) => r.side === side && (r.kind === 'pts' || r.cons_rk <= 110 || r.our_rk <= 110)).sort((a, b) => sc(b) - sc(a)).slice(0, 8);
-    if (!rows.length) w.appendChild(h('p', 'mm-note', 'None for this filter.'));
-    rows.forEach((r) => {
-      const b = h('button', 'mm-cons-row'); b.type = 'button'; b.onclick = () => MMP.open(r.player);
-      const det = r.kind === 'pts' ? `Us ${r.ours.toFixed(1)} vs experts ${r.cons_pts.toFixed(1)} pts` : `Us ${r.our_pos} vs experts ${r.cons_pos}`;
-      b.append(h('span', 'n', r.player), h('span', 'p', `${r.pos} · ${r.team}`), h('span', 'm', det)); w.appendChild(b);
-    });
-    return w;
-  };
-  body.append(col('higher', 'We\u2019re higher'), col('lower', 'We\u2019re lower')); el.appendChild(body);
-  let open = false; try { open = localStorage.getItem('mm_cons_open') === '1'; } catch (e) {}
-  const set = (o) => { el.classList.toggle('open', o); tg.textContent = o ? '\u2212' : '+'; tg.setAttribute('aria-expanded', String(o)); tg.setAttribute('aria-label', o ? 'Hide disagreements' : 'Show disagreements'); try { localStorage.setItem('mm_cons_open', o ? '1' : '0'); } catch (e) {} };
-  tg.onclick = () => set(!el.classList.contains('open')); set(open);
-});
 dash.draw('pl_list', (el) => {
   const m = MMP.all(); el.replaceChildren(); if (!m) return; const p = dash.params(); const q = '';
   const list = Array.from(m.values()).filter((x) => (!p.pl_team || x.team === p.pl_team) && (!p.pl_pos || x.pos === p.pl_pos) && (!q || x.player.toLowerCase().includes(q)))
@@ -2385,17 +2363,34 @@ dash.draw('pl_profile', (el) => {
     const tierTxt = { soft: 'soft', tough: 'tough', average: 'about average' };
     const opp = PJ[0].opp; const ot = (by['Pass Yds'] || by['Rec Yds'] || by['Rush Yds'] || PJ[0]).opp_tier;
     const c = card('Projections', `Every stat we project. Neutral = against a league-average defense. vs ${opp} = his real matchup this week (${opp}'s defense is ${tierTxt[ot] || 'about average'} for his main stat). Effect = how much that defense and coverage move him. TDs are expected touchdowns (0.25 = one TD in four games like this). Fantasy points use full PPR: 1 per catch, 0.1 per rushing or receiving yard, 0.04 per passing yard, 6 per rushing or receiving TD, 4 per passing TD, −2 per interception.`);
-    const t = h('table', 'mm-table mm-pf-proj'); const hr = h('tr'); [['Stat', ''], ['Neutral', 'num'], [`vs ${opp}`, 'num k'], ['Effect', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
+    const t = h('table', 'mm-table mm-pf-proj'); const hr = h('tr'); [['Stat', ''], ['Neutral', 'num'], [`vs ${opp}`, 'num'], ['Effect', 'num'], ['Final', 'num k']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
     const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
     const fmt = (st, v) => (st.endsWith('Yds') || st === 'Passer rating' ? d3.format('.0f')(v) : st === 'Anytime TD' ? d3.format('.0%')(v) : st.endsWith(' TD') || st === 'INT' ? d3.format('.2f')(v) : d3.format('.1f')(v));
     (ORD[x.pos] || []).filter((st) => by[st]).forEach((st) => {
       const r = by[st]; const tr = h('tr', st === 'Fantasy pts' ? 'fp' : ''); tr.appendChild(h('td', '', st === 'Fantasy pts' ? 'Fantasy pts (PPR)' : st === 'Anytime TD' ? 'Anytime TD chance' : st));
-      const eff = r.neutral > 0 ? r.week / r.neutral - 1 : 0;
-      const isTd = st.endsWith(' TD') && st !== 'Anytime TD'; const dlt = r.week - r.neutral;
+      const mv = r.model != null ? r.model : r.week; const eff = r.neutral > 0 ? mv / r.neutral - 1 : 0;
+      const isTd = st.endsWith(' TD') && st !== 'Anytime TD'; const dlt = mv - r.neutral;
       const effTxt = isTd ? (Math.abs(dlt) < 0.005 ? '—' : `${dlt > 0 ? '+' : '−'}${Math.abs(dlt).toFixed(2)}`) : (Math.abs(eff) < 0.005 ? '—' : `${eff > 0 ? '+' : '−'}${Math.abs(eff * 100).toFixed(0)}%`);
-      tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num g', fmt(st, r.week)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), effTxt)); tb.appendChild(tr);
+      const fin = h('td', 'num g' + (r.mkt != null ? ' mkt' : ''), fmt(st, r.week)); if (r.mkt != null && st !== 'Fantasy pts') { fin.title = `Our model ${fmt(st, mv)} · betting market ${fmt(st, r.mkt)}`; fin.tabIndex = 0; fin.setAttribute('role', 'button');
+        const tgl = () => { const nx = tr.nextSibling; if (nx && nx.classList && nx.classList.contains('mm-fin-x')) { nx.remove(); return; } const xr = h('tr', 'mm-fin-x'); const td = h('td', '', `${st}: our model ${fmt(st, mv)} · betting market ${fmt(st, r.mkt)} → final ${fmt(st, r.week)}`); td.colSpan = 5; xr.appendChild(td); tr.after(xr); };
+        fin.onclick = tgl; fin.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tgl(); } }; }
+      tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num', fmt(st, mv)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), effTxt), fin); tb.appendChild(tr);
     });
     t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); c.appendChild(sw);
+    const anyM = PJ.some((r) => r.mkt != null && r.stat !== 'Fantasy pts');
+    const at = (PJ[0] || {}).mkt_at ? new Date(PJ[0].mkt_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }) + ' PT' : '';
+    c.appendChild(h('p', 'mm-note mm-fin-note', anyM ? `Final = our model blended with the betting market's lines for him (lines as of ${at}). The market gets most of the say on yards, since it has beaten pure models on those; our model keeps more say on catches and touchdowns. Underlined numbers include a market line; tap one to see both.` : 'Final = our model. No betting lines are posted for him yet; once they are, Final blends them in.'));
+    const FPr = by['Fantasy pts'];
+    if (FPr && FPr.floor != null) {
+      const rb = h('div', 'mm-range'); rb.appendChild(h('div', 'mm-range-k', 'Fantasy range this week'));
+      const row = h('div', 'mm-range-row');
+      [['Bad week', FPr.floor, 'lo'], ['Typical', FPr.med, 'mid'], ['Big week', FPr.ceil, 'hi']].forEach(([l, v, cl]) => { const b = h('div', 'mm-range-c ' + cl); b.append(h('div', 'v', v.toFixed(1)), h('div', 'l', l)); row.appendChild(b); });
+      rb.appendChild(row);
+      const mx = Math.max(FPr.ceil * 1.08, 1); const bar = h('div', 'mm-range-bar'); const fill = h('div', 'f'); fill.style.left = (FPr.floor / mx * 100) + '%'; fill.style.width = ((FPr.ceil - FPr.floor) / mx * 100) + '%';
+      const mk = h('div', 'm'); mk.style.left = (FPr.med / mx * 100) + '%'; const mean = h('div', 'a'); mean.style.left = (FPr.week / mx * 100) + '%'; mean.title = 'Projection (average)'; bar.append(fill, mk, mean); rb.appendChild(bar);
+      rb.appendChild(h('p', 'mm-note', `About 1 in 10 weeks he scores under ${FPr.floor.toFixed(1)} and 1 in 10 over ${FPr.ceil.toFixed(1)}. Typical is what a normal week looks like; it sits below the ${FPr.week.toFixed(1)} projection because a few huge games pull the average up. Based on how players with similar projections scored, 2018\u20132025.`));
+      c.appendChild(rb);
+    }
     const CN = (MM.ok('pl_cons') || []).find((r) => r.player === x.player);
     if (CN) {
       const bx = h('div', 'mm-cons tone-' + (CN.side === 'higher' ? 'good' : CN.side === 'lower' ? 'bad' : 'info'));
