@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027202314', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027204057', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -396,6 +396,10 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-find-col h3 { grid-column: 1 / -1; }
 .mm-find { grid-template-columns: 1fr; }
 
+.mm-cash-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; }
+.mm-cash-side { display: grid; gap: 4px; min-width: 0; }
+@media (max-width: 860px) { .mm-cash-grid { grid-template-columns: 1fr; } }
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -468,6 +472,18 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     </div>
     <p class="mm-note mm-nosim" hidden>This game hasn't been simulated yet. Sims for every game are coming once the simulator is set up for all 32 teams. Its best picks above and the Prop explorer already cover it.</p>
     <div class="mm-stack mm-simblock">
+    <div class="mm-card mm-compact" id="cash-card">
+      <h2>How our picks cashed in 10,000 sims</h2>
+      <p class="mm-note">Mr. Milk's 10 Thursday picks, played out in every simulated game. Bar = how often the pick cashed. White tick = our model's probability before the sims. Gold bars cashed 55%+ (about PrizePicks break-even).</p>
+      <div class="mm-cash-grid">
+        <div class="mm-chart" id="cash-chart" data-draw="cash_chart" data-source="thu_picks"></div>
+        <div class="mm-cash-side">
+          <h3 class="mm-h3">Picks cashed per game</h3>
+          <div class="mm-chart mm-chart-xs" id="cashdist-chart" data-draw="cashdist_chart" data-source="sim_pickdist" data-h="190"></div>
+          <p class="mm-note mm-xs" data-draw="cashdist_note" data-source="sim_pickdist">—</p>
+        </div>
+      </div>
+    </div>
     <div class="mm-card mm-live-card" id="live-card">
       <div class="mm-live-top"><h2>Watch a sim live</h2><span class="mm-live-id"></span></div>
       <p class="mm-note">One of 500 full games from the same engine as the 10,000 sims, played back snap by snap. Watch Mr. Milk's picks cash (or not) as it goes. Sim it again for a different game; every one is a real outcome the model can produce.</p>
@@ -1736,6 +1752,47 @@ document.querySelectorAll('.mm-med-team .mm-btn').forEach((b) => b.addEventListe
   document.querySelectorAll('.mm-med-team .mm-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   dash.setParams({ med_team: b.dataset.t || null });
 }));
+</script>
+<script>
+/* ---------- how the picks cashed in 10,000 sims ---------- */
+(() => {
+  const SH = { 'Rush Yds': 'Rush Yds', 'Rec Yds': 'Rec Yds', Receptions: 'Rec', 'Pass Att': 'Pass Att', 'Pass TD': 'Pass TD', 'Rush Att': 'Rush Att', 'Pass Yds': 'Pass Yds', Completions: 'Cmp' };
+  const last = (n) => n.split(' ').slice(1).join(' ') || n;
+  dash.draw('cash_chart', (el) => {
+    const d0 = MM.ok('thu_picks'); el.replaceChildren(); if (!d0) return;
+    const d = d0.filter((r) => r.sim_cash != null).slice().sort((a, b) => b.sim_cash - a.sim_cash);
+    const W = Math.max(280, el.clientWidth), narrow = W < 520, rowH = narrow ? 34 : 30, m = { t: 6, r: 44, b: 22, l: narrow ? 128 : 220 }, H = m.t + d.length * rowH + m.b;
+    const x = d3.scaleLinear([0, 1], [m.l, W - m.r]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'How often each pick cashed across 10,000 sims');
+    [0, 0.25, 0.5, 0.75, 1].forEach((v) => { svg.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-grid)'); svg.append('text').attr('x', x(v)).attr('y', H - 6).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(d3.format('.0%')(v)); });
+    svg.append('line').attr('x1', x(0.55)).attr('x2', x(0.55)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+    const g = svg.append('g').selectAll('g').data(d).join('g').attr('transform', (r, i) => `translate(0,${m.t + i * rowH})`);
+    g.append('text').attr('x', 0).attr('y', narrow ? rowH / 2 - 6 : rowH / 2).attr('dy', '0.32em').attr('fill', 'var(--color-fg)').attr('font-size', narrow ? 12 : 13).attr('font-weight', 700).text((r) => narrow ? last(r.player) : r.player);
+    g.append('text').attr('x', narrow ? 0 : 128).attr('y', narrow ? rowH / 2 + 8 : rowH / 2).attr('dy', '0.32em').attr('fill', 'var(--color-fg-muted)').attr('font-size', narrow ? 11 : 12).text((r) => `${r.pick === 'Over' ? 'O' : 'U'} ${r.line} ${SH[r.stat] || r.stat}`);
+    g.append('rect').attr('x', x(0)).attr('y', rowH / 2 - 6).attr('width', x(1) - x(0)).attr('height', 12).attr('rx', 3).attr('fill', '#1C2646');
+    g.append('rect').attr('x', x(0)).attr('y', rowH / 2 - 6).attr('width', (r) => x(r.sim_cash) - x(0)).attr('height', 12).attr('rx', 3).attr('fill', (r) => (r.sim_cash >= 0.55 ? 'var(--mm-gb)' : '#5B6C92'));
+    g.append('rect').attr('x', (r) => x(r.model_prob) - 1.5).attr('y', rowH / 2 - 9).attr('width', 3).attr('height', 18).attr('fill', '#EBF0FA');
+    g.append('text').attr('x', W - m.r + 6).attr('y', rowH / 2).attr('dy', '0.32em').attr('fill', 'var(--color-fg)').attr('font-size', 13).attr('font-weight', 700).text((r) => d3.format('.0%')(r.sim_cash));
+    const tip = document.createElement('div'); tip.className = 'mm-tip'; tip.hidden = true; el.appendChild(tip);
+    g.on('mousemove', (ev, r) => { tip.hidden = false; tip.replaceChildren(); const a = document.createElement('div'); a.className = 'k'; a.textContent = `${r.player} ${r.pick} ${r.line} ${r.stat}`; const b = document.createElement('div'); b.textContent = `Cashed in ${d3.format(',')(Math.round(r.sim_cash * 10000))} of 10,000 sims · model ${d3.format('.0%')(r.model_prob)}`; tip.append(a, b);
+      const [px, py] = d3.pointer(ev, el); tip.style.left = Math.min(px + 10, el.clientWidth - tip.offsetWidth - 4) + 'px'; tip.style.top = Math.max(0, py - 44) + 'px'; }).on('mouseleave', () => { tip.hidden = true; });
+  });
+  dash.draw('cashdist_chart', (el) => {
+    const d = MM.ok('sim_pickdist'); el.replaceChildren(); if (!d) return;
+    const W = Math.max(240, el.clientWidth), H = +el.dataset.h || 190, m = { t: 18, r: 6, b: 22, l: 6 };
+    const x = d3.scaleBand(d.map((r) => r.hits), [m.l, W - m.r]).padding(0.18), y = d3.scaleLinear([0, d3.max(d, (r) => r.share) * 1.12], [H - m.b, m.t]);
+    const mode = d.reduce((a, b) => (b.share > a.share ? b : a));
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'How many of the 10 picks cashed per simulated game');
+    svg.append('g').selectAll('rect').data(d).join('rect').attr('x', (r) => x(r.hits)).attr('width', x.bandwidth()).attr('y', (r) => y(r.share)).attr('height', (r) => y(0) - y(r.share)).attr('rx', 3).attr('fill', (r) => (r === mode ? 'var(--mm-gb)' : r.hits >= 6 ? 'var(--mm-cyan)' : '#3A4B72'));
+    svg.append('g').selectAll('text').data(d).join('text').attr('x', (r) => x(r.hits) + x.bandwidth() / 2).attr('y', (r) => y(r.share) - 4).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 10).text((r) => (r.share >= 0.02 ? d3.format('.0%')(r.share) : ''));
+    svg.append('g').selectAll('text.k').data(d).join('text').attr('x', (r) => x(r.hits) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg)').attr('font-size', 11).attr('font-weight', 700).text((r) => r.hits);
+  });
+  dash.draw('cashdist_note', (el) => {
+    const d = MM.ok('sim_pickdist'); if (!d) { el.textContent = '—'; return; }
+    const n = d3.sum(d, (r) => r.sims), avg = d3.sum(d, (r) => r.hits * r.sims) / n, mode = d.reduce((a, b) => (b.share > a.share ? b : a)), six = d3.sum(d.filter((r) => r.hits >= 6), (r) => r.share);
+    el.textContent = `Out of 10 picks. Most common: ${mode.hits} cashed (${d3.format('.0%')(mode.share)} of games). Average ${d3.format('.1f')(avg)}. 6 or more cashed in ${d3.format('.0%')(six)} of games (cyan + gold).`;
+  });
+})();
 </script>
 
 </div>
