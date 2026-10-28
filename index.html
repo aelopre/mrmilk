@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027182213', IDS = ["book_board", "dvp", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027182422', IDS = ["book_board", "dvp", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -219,6 +219,23 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: currentColor; }
 .mm-legend .s { color: var(--mm-hit); } .mm-legend .m { color: #5B6C92; } .mm-legend .t { color: var(--mm-miss); }
 .mm-legend b { color: var(--mm-txt); font-weight: 600; }
+
+.mm-dteam-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.mm-dteam-head h2 { margin: 0; }
+.mm-dteam-head .mm-team { font-size: 18px; padding: 3px 12px; }
+.mm-dteam-head .mm-note b { color: var(--mm-txt); }
+.mm-dteam { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.mm-dpos { background: var(--mm-panel); border: 1px solid var(--mm-line); border-top: 3px solid var(--mm-pc, var(--mm-gold)); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
+.mm-dpos.qb { --mm-pc: #FF5C5C; } .mm-dpos.rb { --mm-pc: #FF9248; } .mm-dpos.wr { --mm-pc: #4EA1FF; } .mm-dpos.te { --mm-pc: #A78BFA; }
+.mm-dpos h3 { margin: 0; font-family: var(--mm-display); font-weight: 400; font-size: 22px; letter-spacing: .03em; color: var(--mm-pc); }
+.mm-dpos .mm-dfp { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mm-dpos .mm-dfp .v { font-family: var(--mm-display); font-size: 40px; line-height: 1; }
+.mm-dpos .mm-dfp .l { color: var(--mm-mut); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.mm-dpos .mm-dvs { font-size: 14px; color: var(--mm-mut); }
+.mm-dpos dl { margin: 0; display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center; font-variant-numeric: tabular-nums; }
+.mm-dpos dt { color: var(--mm-mut); font-size: 15px; } .mm-dpos dd { margin: 0; text-align: right; font-weight: 700; }
+.mm-dpos .mm-rk { font-size: 16px; min-width: 1.9em; }
+.mm-table tbody tr.mm-hl td { background: rgba(255,190,46,.14) !important; box-shadow: inset 0 1px 0 rgba(255,190,46,.5), inset 0 -1px 0 rgba(255,190,46,.5); }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
@@ -435,8 +452,14 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     <div class="mm-controls">
       <label>Position <select id="dvp-pos" data-draw="dvp_pos_sel" data-source="dvp"></select></label>
       <label>Rank by <select id="dvp-sort" data-draw="dvp_sort_sel" data-source="dvp"></select></label>
+      <label>Team <select id="dvp-team" data-draw="dvp_team_sel" data-source="dvp"></select></label>
     </div>
     <div class="mm-legend"><span class="s"><b>Ranks 1–8</b> softest (allow the most)</span><span class="m"><b>9–24</b> middle</span><span class="t"><b>25–32</b> toughest (allow the least)</span></div>
+    <div class="mm-card mm-dteam-card" id="dvp-team-card" hidden>
+      <div class="mm-dteam-head" data-draw="dvp_team_head" data-source="dvp"></div>
+      <p class="mm-note">Everything this defense has allowed per game, Weeks 1–7, to each position. The number in the box is its league rank: 1 allows the most (softest), 32 the least (toughest). For interceptions, 1 means it forces the fewest.</p>
+      <div class="mm-dteam" data-draw="dvp_team_grid" data-source="dvp"></div>
+    </div>
     <div class="mm-card" id="dvp-matchups-card">
       <h2 data-draw="dvp_match_title" data-source="dvp">Week 8 matchups</h2>
       <p class="mm-note">Every offense playing in Week 8, sorted by how much its opponent's defense gives up to this position. Rank 1 is the softest defense in the league, 32 the toughest. Click a column header to sort; click again to flip it.</p>
@@ -904,7 +927,9 @@ window.MMD = (() => {
     const all = D.filter((r) => r.pos === pos);
     const byStat = all.slice().sort((a, b) => sgn * (a[sort] - b[sort]) || a.team.localeCompare(b.team));
     const rows = col ? all.slice().sort((a, b) => sgn * cmp(OTHER[col](a), OTHER[col](b)) || a[sort + '_rank'] - b[sort + '_rank']) : byStat;
-    return { pos, cols, sort, label, col, dir, rows, byStat };
+    const teams = Array.from(new Set(D.map((r) => r.team))).sort((a, b) => tm(a).localeCompare(tm(b)));
+    const team = teams.includes(p.dvp_team) ? p.dvp_team : null;
+    return { pos, cols, sort, label, col, dir, rows, byStat, teams, team, D };
   };
   const tier = (rk) => (rk <= 8 ? 'mm-tier-soft' : rk >= 25 ? 'mm-tier-tough' : '');
   const fmt = (c, v) => (/_td$|^ints$/.test(c) ? d3.format('.2f')(v) : d3.format('.1f')(v));
@@ -952,6 +977,7 @@ dash.draw('dvp_match_rows', (tb) => {
   const s = MMD.state(); tb.replaceChildren(); if (!s) return;
   s.rows.filter((r) => r.wk8_offense).forEach((r) => {
     const tr = document.createElement('tr'); tr.dataset.key = r.id;
+    if (s.team && (r.team === s.team || r.wk8_offense === s.team)) tr.classList.add('mm-hl');
     MMD.teamCell(tr, r.wk8_offense); MMD.teamCell(tr, r.team); MM.cell(tr, r.wk8_day ? r.wk8_day.slice(0, 3) : '', 'mm-hide-sm');
     MMD.rank(tr, r[s.sort + '_rank']); MM.cell(tr, MMD.fmt(s.sort, r[s.sort]), 'num');
     const v = r.fpts_vs_avg; MM.cell(tr, (v > 0 ? '+' : v < 0 ? '−' : '') + d3.format('.0%')(Math.abs(v)), 'num mm-hide-sm ' + (v >= 0.1 ? 'mm-tier-soft' : v <= -0.1 ? 'mm-tier-tough' : ''));
@@ -968,6 +994,7 @@ dash.draw('dvp_rows', (tb) => {
   const s = MMD.state(); tb.replaceChildren(); if (!s) return;
   s.rows.forEach((r) => {
     const tr = document.createElement('tr'); tr.dataset.key = r.id;
+    if (s.team && r.team === s.team) tr.classList.add('mm-hl');
     MMD.rank(tr, r[s.sort + '_rank']); MMD.teamCell(tr, r.team); MM.cell(tr, String(r.games), 'num mm-hide-sm');
     s.cols.forEach(([k]) => { const td = MM.cell(tr, MMD.fmt(k, r[k]), 'num ' + MMD.tier(r[k + '_rank'])); const sm = document.createElement('small'); sm.textContent = r[k + '_rank']; td.appendChild(sm); });
     if (r.wk8_offense) MMD.teamCell(tr, r.wk8_offense); else MM.cell(tr, 'Bye');
@@ -982,11 +1009,53 @@ dash.draw('dvp_chart', (el) => {
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', `${s.label} allowed to ${MMD.NAME[s.pos]} per game, all 32 defenses`);
   const col = (r) => { const rk = r[k + '_rank']; return rk <= 8 ? 'var(--mm-hit)' : rk >= 25 ? 'var(--mm-miss)' : '#5B6C92'; };
   const g = svg.append('g').selectAll('g').data(d).join('g').attr('transform', (r, i) => `translate(0,${m.t + i * rowH})`);
-  g.append('text').attr('x', m.l - 8).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg)').attr('font-size', 12).text((r) => MMD.tm(r.team));
-  g.append('rect').attr('x', x(0)).attr('y', 3).attr('height', rowH - 6).attr('width', (r) => Math.max(1, x(r[k]) - x(0))).attr('rx', 3).attr('fill', col);
+  g.append('text').attr('x', m.l - 8).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg)').attr('font-size', 12).attr('font-weight', (r) => (r.team === s.team ? 800 : 600)).attr('fill', (r) => (r.team === s.team ? 'var(--mm-gold)' : 'var(--color-fg)')).text((r) => (r.team === s.team ? '▶ ' : '') + MMD.tm(r.team));
+  g.append('rect').attr('x', x(0)).attr('y', 3).attr('height', rowH - 6).attr('width', (r) => Math.max(1, x(r[k]) - x(0))).attr('rx', 3).attr('fill', col).attr('stroke', (r) => (r.team === s.team ? 'var(--mm-gold)' : 'none')).attr('stroke-width', 2);
   g.append('text').attr('x', (r) => x(r[k]) + 5).attr('y', rowH / 2).attr('dy', '0.32em').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text((r) => MMD.fmt(k, r[k]));
   svg.append('line').attr('x1', x(avg)).attr('x2', x(avg)).attr('y1', m.t - 6).attr('y2', H - m.b).attr('stroke', 'var(--mm-gb)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
   svg.append('text').attr('x', x(avg)).attr('y', 12).attr('text-anchor', 'middle').attr('fill', 'var(--mm-gb)').attr('font-size', 12).attr('font-weight', 700).text(`League avg ${MMD.fmt(k, avg)}`);
+});
+dash.draw('dvp_team_sel', (sel) => {
+  const s = MMD.state(); sel.replaceChildren(); if (!s) return;
+  sel.appendChild(new Option('All defenses', ''));
+  s.teams.forEach((t) => sel.appendChild(new Option(MMD.tm(t), t))); sel.value = s.team || '';
+  sel.onchange = () => dash.setParams({ dvp_team: sel.value || null });
+});
+dash.onData(() => {
+  const s = MMD.state(); document.querySelectorAll('.mm-dteam-card').forEach((c) => { c.hidden = !(s && s.team); });
+});
+dash.draw('dvp_team_head', (el) => {
+  const s = MMD.state(); el.replaceChildren(); if (!s || !s.team) return;
+  const chip = document.createElement('span'); chip.className = 'mm-team ' + MMD.tm(s.team).toLowerCase(); chip.textContent = MMD.tm(s.team);
+  const h = document.createElement('h2'); h.textContent = 'Defense profile';
+  const any = s.D.find((r) => r.team === s.team);
+  const n = document.createElement('p'); n.className = 'mm-note';
+  n.append(`${any.games} games played · Week 8: `);
+  const b = document.createElement('b'); b.textContent = any.wk8_offense ? `vs ${MMD.tm(any.wk8_offense)} (${any.wk8_game.replace(/\bLA\b/g, 'LAR')}, ${any.wk8_day})` : 'Bye'; n.appendChild(b);
+  el.append(chip, h, n);
+});
+dash.draw('dvp_team_grid', (el) => {
+  const s = MMD.state(); el.replaceChildren(); if (!s || !s.team) return;
+  MMD.POSL.forEach((pos) => {
+    const r = s.D.find((x) => x.team === s.team && x.pos === pos); if (!r) return;
+    const box = document.createElement('div'); box.className = 'mm-dpos ' + pos.toLowerCase();
+    const h = document.createElement('h3'); h.textContent = 'vs ' + MMD.NAME[pos];
+    const fp = document.createElement('div'); fp.className = 'mm-dfp';
+    const left = document.createElement('div'); const v = document.createElement('span'); v.className = 'v ' + MMD.tier(r.fpts_rank); v.textContent = MMD.fmt('fpts', r.fpts);
+    const l = document.createElement('div'); l.className = 'l'; l.textContent = 'Fantasy pts / game'; left.append(v, l);
+    const rk = document.createElement('span'); rk.className = 'mm-rk ' + MMD.tier(r.fpts_rank); rk.textContent = r.fpts_rank; rk.title = 'League rank';
+    fp.append(left, rk);
+    const vs = document.createElement('div'); vs.className = 'mm-dvs'; const pct = r.fpts_vs_avg;
+    vs.textContent = `${pct >= 0 ? '+' : '−'}${d3.format('.0%')(Math.abs(pct))} vs league average`;
+    const dl = document.createElement('dl');
+    MMD.COLS[pos].filter(([k]) => k !== 'fpts').forEach(([k, lab]) => {
+      const dt = document.createElement('dt'); dt.textContent = lab;
+      const dd = document.createElement('dd'); dd.className = MMD.tier(r[k + '_rank']); dd.textContent = MMD.fmt(k, r[k]);
+      const dr = document.createElement('dd'); const c = document.createElement('span'); c.className = 'mm-rk ' + MMD.tier(r[k + '_rank']); c.textContent = r[k + '_rank']; dr.appendChild(c);
+      dl.append(dt, dd, dr);
+    });
+    box.append(h, fp, vs, dl); el.appendChild(box);
+  });
 });
 </script>
 
