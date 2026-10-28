@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028004715', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028012600', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -446,6 +446,12 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-match li b { color: var(--mm-txt); }
 .mm-pf-cb { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--mm-line); border-radius: 10px; background: rgba(255,255,255,.02); }
 .mm-pf-cb .hd { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--mm-mut); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+.mm-pf-cb .sn { display: flex; align-items: baseline; gap: 10px; } .mm-pf-cb .sn b { font-family: var(--mm-display); font-weight: 400; font-size: 34px; line-height: 1; color: var(--mm-gold); }
+.mm-pf-cb .mh { color: var(--mm-mut); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+.mm-pf-cb .mix { display: grid; gap: 4px; } .mm-pf-cb .mix .r { display: grid; grid-template-columns: minmax(0, 9.5em) 1fr 3em; align-items: center; gap: 8px; font-size: 14px; }
+.mm-pf-cb .mix .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--mm-mut); } .mm-pf-cb .mix .v { text-align: right; font-variant-numeric: tabular-nums; }
+.mm-pf-cb .mix .bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--mm-mut) var(--w), transparent var(--w)); opacity: .55; }
+.mm-pf-cb .mix .r.me .n, .mm-pf-cb .mix .r.me .v { color: var(--mm-txt); font-weight: 700; } .mm-pf-cb .mix .r.me .bar { background: linear-gradient(90deg, var(--mm-gold) var(--w), transparent var(--w)); opacity: 1; }
 .mm-pf-cb .cb { display: grid; gap: 1px; } .mm-pf-cb .cb b { font-size: 18px; color: var(--mm-txt); } .mm-pf-cb .cb .mm-note { font-size: 14px; }
 .mm-link { all: unset; cursor: pointer; color: var(--mm-cyan); font-weight: 700; font-size: 14px; }
 .mm-link:hover { text-decoration: underline; }
@@ -728,7 +734,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     </div>
     <div class="mm-card" id="dvp-cb-card" hidden>
       <h2>WR vs CB, Week 8</h2>
-      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). Pick a team above to filter. Source: Edgehalla.</p>
+      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). Proj snaps = his share of plays over his last 3 games × his team's recent pace. CB % of D tgts = how many of the defense's targets that corner was the man in coverage on (from PFR via nflverse), a reminder that one corner rarely covers anyone all game. Pick a team above to filter. Source: Edgehalla.</p>
       <div class="mm-scroll">
         <table class="mm-table" id="dvp-cb-table" data-source="pl_cb" data-row-key="id">
           <thead><tr data-draw="dvp_cb_head" data-source="pl_cb"></tr></thead>
@@ -1301,7 +1307,7 @@ dash.draw('dvp_chart', function dvpChart(el) { if (MM.later(el, dvpChart)) retur
 /* ---------- WR vs CB (Edgehalla) ---------- */
 const MMCB = (() => {
   const MO = { Favorable: 0, Neutral: 1, Tough: 2 };
-  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
+  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, snaps_proj: (r) => r.snaps_proj ?? -1, cb1_tshare: (r) => r.cb1_tshare ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
   const TXT = new Set(['player', 'team', 'align', 'cb1']);
   const state = () => {
     const L = MM.ok('pl_cb'); if (!L) return null; const p = dash.params();
@@ -1326,7 +1332,7 @@ dash.draw('dvp_cb_head', (tr) => {
   const s = MMCB.state(); tr.replaceChildren(); if (!s) return;
   MMCB.th(tr, s, 'Receiver', '', 'player'); MMCB.th(tr, s, 'Matchup', '', 'matchup'); MMCB.th(tr, s, 'Team', 'mm-hide-sm', 'team'); tr.appendChild(Object.assign(document.createElement('th'), { textContent: 'vs' }));
   MMCB.th(tr, s, 'Lines up', 'mm-hide-sm', 'align'); MMCB.th(tr, s, 'Likely corner', '', 'cb1');
-  MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
+  MMCB.th(tr, s, 'Proj snaps', 'num', 'snaps_proj'); MMCB.th(tr, s, 'CB % of D tgts', 'num mm-hide-sm', 'cb1_tshare'); MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
 });
 dash.draw('dvp_cb_rows', (tb) => {
   const s = MMCB.state(); tb.replaceChildren(); if (!s) return;
@@ -1338,6 +1344,7 @@ dash.draw('dvp_cb_rows', (tb) => {
     MMD.teamCell(tr, r.team); if (tr.lastElementChild) tr.lastElementChild.classList.add('mm-hide-sm'); MMD.teamCell(tr, r.opp);
     MM.cell(tr, r.align + (r.proxy ? '*' : ''), 'mm-hide-sm');
     const c = MM.cell(tr, r.cb1 + (r.cb2 ? ` / ${r.cb2}` : '')); const sm = document.createElement('small'); sm.textContent = MMCB.SIDE[r.cb1_side] || ''; c.appendChild(sm);
+    MM.cell(tr, r.snaps_proj != null ? String(r.snaps_proj) : '—', 'num'); MM.cell(tr, r.cb1_tshare != null ? Math.round(r.cb1_tshare * 100) + '%' : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_tgt != null ? String(r.cb1_tgt) : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_rtg != null ? String(r.cb1_rtg) : '—', 'num ' + (r.cb1_rtg >= 105 ? 'mm-tier-soft' : r.cb1_rtg != null && r.cb1_rtg <= 75 ? 'mm-tier-tough' : ''));
     MM.cell(tr, r.cb1_rank ? `#${r.cb1_rank}` : '—', 'num');
@@ -2251,6 +2258,15 @@ dash.draw('pl_profile', (el) => {
           hd.append(h('span', 'l', `Lines up ${CB.align.toLowerCase()}${CB.proxy ? ' (estimate)' : ''} · likely corner`), h('span', 'mm-rk ' + (CB.matchup === 'Favorable' ? 'mm-tier-soft' : CB.matchup === 'Tough' ? 'mm-tier-tough' : ''), CB.matchup)); cbd.appendChild(hd);
           const one = (n, sd, t, rt, rk) => { const d = h('div', 'cb'); d.append(h('b', '', n), h('span', 'mm-note', [SN[sd], t != null ? `${t} targets` : null, rt != null ? `${rt} passer rating allowed` : null, rk ? `#${rk} of 130 corners` : null].filter(Boolean).join(' · '))); cbd.appendChild(d); };
           one(CB.cb1, CB.cb1_side, CB.cb1_tgt, CB.cb1_rtg, CB.cb1_rank); if (CB.cb2) one(CB.cb2, CB.cb2_side, CB.cb2_tgt, CB.cb2_rtg, CB.cb2_rank);
+          if (CB.snaps_proj != null) { const sn = h('div', 'sn'); sn.append(h('b', '', String(CB.snaps_proj)), h('span', 'mm-note', `projected snaps for ${x.player.split(' ').slice(-1)[0]} (${Math.round(CB.snap_pct * 100)}% of his team's plays over his last 3 games)`)); cbd.appendChild(sn); }
+          const mix = [1, 2, 3, 4, 5].map((i) => [CB['mix' + i + '_name'], CB['mix' + i + '_share']]).filter((m) => m[0]);
+          if (mix.length && CB.d_tgts) {
+            const nm = (n) => String(n).replace(/[^a-z]/gi, '').toLowerCase().replace(/(jr|sr|ii|iii|iv)$/, '');
+            const k1 = nm(CB.cb1).slice(-6), mx = Math.max(...mix.map((m) => m[1]));
+            cbd.appendChild(h('div', 'mh', `Who ${x.opp}'s ${CB.d_tgts} targets went at`));
+            const bars = h('div', 'mix'); mix.forEach(([n, v]) => { const row = h('div', 'r' + (nm(n).slice(-6) === k1 ? ' me' : '')); const bar = h('span', 'bar'); bar.style.setProperty('--w', (v / mx * 100).toFixed(0) + '%'); row.append(h('span', 'n', n), bar, h('span', 'v', pc(v))); bars.appendChild(row); }); cbd.appendChild(bars);
+            if (CB.cb1_tshare != null) cbd.appendChild(h('p', 'mm-note', `${CB.cb1.split(' ').slice(-1)[0] === 'Jr.' || CB.cb1.split(' ').slice(-1)[0] === 'II' ? CB.cb1.split(' ').slice(-2)[0] : CB.cb1.split(' ').slice(-1)[0]} is on the field for ${CB.cb1_snap != null ? Math.round(CB.cb1_snap * 100) + '% of snaps' : 'most snaps'} but was the man in coverage on just ${pc(CB.cb1_tshare)} of ${x.opp}'s targets. Coverage rotates and zone spreads it out, so expect a mix of defenders, not one.`));
+          }
           if (CB.opp_pts_tgt != null) cbd.appendChild(h('p', 'mm-note', `${x.opp} gives up ${CB.opp_pts_tgt.toFixed(2)} fantasy pts per target to WRs (${ord(33 - CB.opp_pts_rank)} most in the league). Based on alignment, not shadow coverage. Source: Edgehalla.`));
           box.appendChild(cbd);
         }
