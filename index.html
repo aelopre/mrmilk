@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027223732', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027224042', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -1945,16 +1945,21 @@ window.MMP = (() => {
   let gid = 0;
   function jersey(team, num, pos, size) {
     const [body, nc, trim] = JC[team] || ['#2E4170', '#FFFFFF', '#8C9AB8']; const pcol = PC[pos] || '#8C9AB8'; const id = 'mmj' + (++gid);
-    const s = sv('svg', { viewBox: '0 0 100 100', width: size, height: size, class: 'mm-jersey', role: 'img', 'aria-label': `${team} jersey number ${num ?? ''}` });
+    const s = sv('svg', { viewBox: '0 0 100 100', width: size, height: size, class: 'mm-jersey', role: 'img', 'aria-label': `${team} number ${num ?? ''}` });
     const defs = sv('defs', {}); const g = sv('radialGradient', { id, cx: '50%', cy: '40%', r: '60%' });
     g.append(sv('stop', { offset: '0%', 'stop-color': pcol, 'stop-opacity': '0.38' }), sv('stop', { offset: '100%', 'stop-color': pcol, 'stop-opacity': '0.06' })); defs.appendChild(g); s.appendChild(defs);
     s.appendChild(sv('circle', { cx: 50, cy: 50, r: 48, fill: `url(#${id})`, stroke: pcol, 'stroke-opacity': '0.7', 'stroke-width': 2 }));
-    const shape = 'M31 18 L43 13 Q50 21 57 13 L69 18 L86 31 L79 46 L71 41 L71 84 Q50 89 29 84 L29 41 L21 46 L14 31 Z';
-    s.appendChild(sv('path', { d: shape, fill: body, stroke: trim, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
-    s.appendChild(sv('path', { d: 'M17.5 33 L24 37 M82.5 33 L76 37', stroke: trim, 'stroke-width': 3.5, 'stroke-linecap': 'round', opacity: 0.9 }));      // sleeve stripes
-    s.appendChild(sv('path', { d: 'M43 13 Q50 25 57 13', fill: 'none', stroke: trim, 'stroke-width': 3 }));                                          // collar
-    s.appendChild(sv('path', { d: 'M29 41 Q50 46 71 41 L71 44 Q50 49 29 44 Z', fill: '#000', opacity: 0.12 }));                                         // shoulder shading
-    if (num != null) { const t = sv('text', { x: 50, y: 70, 'text-anchor': 'middle', 'font-family': "'MM Bebas', 'Bebas Neue', Impact, sans-serif", 'font-size': String(num).length > 1 ? 31 : 34, fill: nc, stroke: trim === nc ? '#00000055' : trim, 'stroke-width': 1.6, 'paint-order': 'stroke', 'letter-spacing': '0.5' }); t.textContent = num; s.appendChild(t); }
+    // just the number: filled with the team's lighter color, outlined in the darker one, with a thin edge in the third color
+    if (num != null) {
+      const lum = (c) => { const v = parseInt(c.slice(1), 16); const r = (v >> 16) & 255, gg = (v >> 8) & 255, b = v & 255; return 0.2126 * r + 0.7152 * gg + 0.0722 * b; };
+      const [fillC, lineC] = lum(body) >= lum(nc) ? [body, nc] : [nc, body];
+      const edge = lum(lineC) < 60 ? (trim !== fillC && trim !== lineC ? trim : '#8C9AB8') : lineC;
+      const fs = String(num).length > 1 ? 58 : 64;
+      const base = { x: 50, y: 52, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': "'MM Bebas', 'Bebas Neue', Impact, sans-serif", 'font-size': fs, 'letter-spacing': '1', 'stroke-linejoin': 'round' };
+      const t1 = sv('text', { ...base, fill: 'none', stroke: edge, 'stroke-width': 9 }); t1.textContent = num;
+      const t2 = sv('text', { ...base, fill: fillC, stroke: lineC, 'stroke-width': 5, 'paint-order': 'stroke' }); t2.textContent = num;
+      s.append(t1, t2);
+    }
     return s;
   }
   const roleOf = (name) => (MM.ok('pl_role') || []).find((r) => r.player === name);
