@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027204714', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027204908', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -400,6 +400,8 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-cash-side { display: grid; gap: 4px; min-width: 0; }
 @media (max-width: 860px) { .mm-cash-grid { grid-template-columns: 1fr; } }
 
+.mm-inputs-wrap { display: grid; gap: 6px; }
+.mm-inputs-lab { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mm-cyan); }
 .mm-inputs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-width: 70rem; }
 .mm-inputs li { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--mm-txt); background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--mm-cyan); border-radius: 6px; padding: 3px 10px; }
 
@@ -413,10 +415,11 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 <div class="mm">
   <header class="mm-head" id="top">
     <div class="mm-brand"><canvas class="mm-logo" data-draw="logo_anim" role="img" aria-label="Mr. Milk logo: a glass football filling with milk past a gold prop line" tabindex="0" title="Replay"></canvas><h1 class="mm-title"><span class="g">Mr.</span> <span class="w">Milk</span></h1><span class="mm-tagline">10K sims · NFL props</span></div>
-    <p class="mm-take">Mr. Milk finds the NFL player props worth playing. Every game is simulated play by play <b>10,000 times</b>, and each pick's chance of cashing comes from blending those sims with the sportsbooks' own prices.</p>
-    <ul class="mm-inputs" aria-label="What goes into the projections">
-      <li>This season's play-by-play</li><li>Player roles: targets, carries, snaps</li><li>Opposing defense vs each position</li><li>Injury reports</li><li>Lines from up to 7 sportsbooks</li><li>Calibrated against how past picks graded</li>
-    </ul>
+    <p class="mm-take">Mr. Milk finds the NFL player props worth playing. We build every player's projection from the data below, simulate each game play by play <b>10,000 times</b> on top of it, then blend the results with the sportsbooks' own prices.</p>
+    <div class="mm-inputs-wrap"><span class="mm-inputs-lab">What feeds the sims</span>
+    <ul class="mm-inputs" aria-label="What feeds the sims">
+      <li>Every player-game this season</li><li>Opponent defense by position</li><li>Coverage matchups: who's guarding him</li><li>Game script: spread and total</li><li>Team volume: targets, carries, pass attempts</li><li>Recent form and role changes</li><li>Injuries and teammates out</li><li>Who's throwing (QB starts)</li><li>Weather</li><li>Regression on hot streaks</li><li>Lines from up to 7 sportsbooks</li><li>Calibrated on Weeks 1–7 results</li>
+    </ul></div>
   </header>
 
   <nav class="mm-tabs" role="tablist" aria-label="Sections">
