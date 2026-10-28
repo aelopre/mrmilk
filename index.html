@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027224611', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027224908', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -464,11 +464,11 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
   .mm-pl-layout.has-player .mm-pf-back { display: inline-block; }
 }
 
-.mm-pf-id { display: flex; align-items: center; gap: 16px; min-width: 0; width: 100%; }
-.mm-pf-idt { display: grid; gap: 8px; min-width: 0; }
-.mm-pf-badge { flex: none; filter: drop-shadow(0 6px 14px rgba(0,0,0,.45)); }
+.mm-pf-id { display: grid; gap: 8px; min-width: 0; width: 100%; }
+.mm-pf-namerow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mm-pf-namerow .mm-pf-name { min-width: 0; }
+.mm-pf-badge { flex: none; width: clamp(50px, 10vw, 82px); height: clamp(50px, 10vw, 82px); margin: -10px -8px -10px -10px; transform: translateY(-4px); filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
 .mm-jersey { display: block; }
-@media (max-width: 480px) { .mm-pf-badge { width: 70px; height: 70px; } .mm-pf-id { gap: 12px; } }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
@@ -2030,8 +2030,8 @@ dash.draw('pl_profile', (el) => {
     if (x.pos !== 'QB') role(f1(R.tgt_pg), 'targets per game');
     if (x.pos === 'RB' && R.car_share != null) { role(pc(R.car_share), `carry share (${ord(R.car_rank)} on ${x.team})`); role(f1(R.car_pg), 'carries per game'); }
   }
-  const badge = MMP.jersey(x.team, R ? R.jersey : null, x.pos, 92); badge.classList.add('mm-pf-badge');
-  const id = h('div', 'mm-pf-id'); const idt = h('div', 'mm-pf-idt'); idt.append(nm, sub); id.append(badge, idt);
+  const badge = MMP.jersey(x.team, R ? R.jersey : null, x.pos, 66); badge.classList.add('mm-pf-badge');
+  const id = h('div', 'mm-pf-id'); const row = h('div', 'mm-pf-namerow'); row.append(badge, nm); id.append(row, sub);   // number sits on the name's line
   head.append(back, id, roles); el.appendChild(head);
   const grid = h('div', 'mm-pf-grid'); el.appendChild(grid);
   // --- this week's props
