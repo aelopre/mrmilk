@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028103305', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028104953', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -846,7 +846,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
       <label>Team <select data-draw="pl_team_sel" data-source="proj_players"></select></label>
       <label>Position <select data-draw="pl_pos_sel" data-source="proj_players"></select></label>
     </div>
-    <div class="mm-card mm-cons-card" data-draw="pl_cons_card" data-source="pl_cons"></div>
     <div class="mm-pl-layout">
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
@@ -2443,12 +2442,6 @@ dash.draw('pl_profile', (el) => {
         });
         t.appendChild(tb); tw.appendChild(t);
         sumBox.replaceChildren();
-        const unit = st === 'Fantasy pts' ? 'PPR points' : st.endsWith('Yds') ? 'yards' : st === 'Receptions' ? 'catches' : st === 'Pass TD' ? 'TDs' : '';
-        const dn = rows.filter((r) => r.status === 'final');
-        if (dn.length) { const e = dn.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / dn.length; sumBox.appendChild(h('p', 'mm-trk-sum', `For him we've missed by ${fmtv(st, e)} ${unit} per game on average over ${dn.length} game${dn.length === 1 ? '' : 's'}.`)); }
-        const wks = [...new Set(TRK.filter((r) => r.stat === st && r.status === 'final').map((r) => r.week))].sort((a, b) => b - a);
-        if (wks.length) { const W = TRK.filter((r) => r.stat === st && r.status === 'final' && r.week === wks[0]); const e = W.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / W.length;
-          sumBox.appendChild(h('p', 'mm-trk-sum', `Across all ${W.length} players we projected for ${st === 'Fantasy pts' ? 'fantasy points' : st} in Week ${wks[0]}, we missed by ${fmtv(st, e)} ${unit} on average.`)); }
         if (rows.some((r) => r.status === 'nofp')) sumBox.appendChild(h('p', 'mm-note', 'Week 7 and earlier: we didn\u2019t project fantasy points or touchdowns yet, so only his actual score is shown. Switch to a stat above to see how those projections did.'));
       };
       const sumBox = h('div', 'mm-trk-sumbox');
