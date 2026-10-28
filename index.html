@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028102551', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028102859', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -443,6 +443,10 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-why-tg { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; cursor: pointer; flex: none; }
 .mm-why-tg:hover { background: rgba(255,255,255,.12); } .mm-why-tg:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
 .mm-why:not(.open) li.more { display: none; } .mm-why-more { justify-self: start; font-size: 14px; }
+.mm-trk, .mm-cons { min-width: 0; max-width: 100%; box-sizing: border-box; } .mm-trk .mm-scroll { max-width: 100%; overflow-x: auto; }
+.mm-trk-t { width: 100%; table-layout: fixed; } .mm-trk-t th, .mm-trk-t td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 6px; padding-right: 6px; }
+.mm-trk-t th:nth-child(1) { width: 12%; } .mm-trk-t th:nth-child(2) { width: 18%; } .mm-trk-t th:nth-child(3) { width: 20%; } .mm-trk-t th:nth-child(4) { width: 28%; } .mm-trk-t th:nth-child(5) { width: 22%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .mm-trk { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--mm-line); } .mm-trk h3 { margin: 0 0 4px; font-size: 16px; }
 .mm-trk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .mm-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.04); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
@@ -2422,11 +2426,11 @@ dash.draw('pl_profile', (el) => {
         chips.replaceChildren(); tw.replaceChildren();
         opts.forEach((st) => { const b = h('button', 'mm-chip' + (st === MMP.trkStat ? ' on' : ''), st === 'Fantasy pts' ? 'Fantasy pts (PPR)' : st); b.type = 'button'; b.setAttribute('aria-pressed', String(st === MMP.trkStat)); b.onclick = () => { MMP.trkStat = st; draw(); }; chips.appendChild(b); });
         const st = MMP.trkStat; const rows = mine.filter((r) => r.stat === st).sort((a, b) => b.week - a.week);
-        const t = h('table', 'mm-table mm-trk-t'); const hr = h('tr'); [['Week', ''], ['Opp', ''], ['We projected', 'num'], ['Actual', 'num'], ['Difference', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
+        const t = h('table', 'mm-table mm-trk-t'); const hr = h('tr'); [['Wk', ''], ['Opp', ''], ['Proj', 'num'], ['Actual', 'num'], ['Diff', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
         const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
         rows.forEach((r) => {
-          const tr = h('tr'); tr.append(h('td', '', 'Wk ' + r.week), h('td', '', r.opp), h('td', 'num g', fmtv(st, r.proj)));
-          if (r.status === 'pending') { tr.append(h('td', 'num mm-trk-wait', 'after game'), h('td', 'num', '—')); }
+          const tr = h('tr'); tr.append(h('td', '', String(r.week)), h('td', '', r.opp), h('td', 'num g', fmtv(st, r.proj)));
+          if (r.status === 'pending') { tr.append(h('td', 'num mm-trk-wait', 'TBD'), h('td', 'num', '—')); }
           else if (r.status === 'dnp') { tr.append(h('td', 'num mm-trk-wait', 'didn’t play'), h('td', 'num', '—')); }
           else {
             const d = r.actual - r.proj; const tol = Math.max(TOL[st] || 2, Math.abs(r.proj) * 0.25);
@@ -2443,7 +2447,7 @@ dash.draw('pl_profile', (el) => {
       if (done.length) { const e = done.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / done.length; sec.appendChild(h('p', 'mm-trk-sum', `For him we've missed by ${e.toFixed(1)} PPR points per game on average over ${done.length} game${done.length === 1 ? '' : 's'}.`)); }
       const ALL = TRK.filter((r) => r.player === '__ALL__').sort((a, b) => b.week - a.week)[0];
       if (ALL) sec.appendChild(h('p', 'mm-trk-sum', `Across all ${ALL.n} players in Week ${ALL.week}, we missed by ${ALL.mae.toFixed(1)} PPR points on average, and ${Math.round(ALL.within5 * 100)}% landed within 5 points of our number.`));
-      sec.appendChild(h('p', 'mm-note', 'Green = within about 25% of our number. Red = off by more than about 50%. + means he beat our projection.'));
+      sec.appendChild(h('p', 'mm-note', 'Proj = what we projected. Diff = actual minus projected (+ means he beat our number). Green = within about 25% of our number. Red = off by more than about 50%.'));
       c.appendChild(sec);
     }
   }
