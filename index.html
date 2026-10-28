@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028104953', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028105229', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -447,6 +447,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-trk-t { width: 100%; table-layout: fixed; } .mm-trk-t th, .mm-trk-t td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 6px; padding-right: 6px; }
 .mm-trk-t th:nth-child(1) { width: 12%; } .mm-trk-t th:nth-child(2) { width: 18%; } .mm-trk-t th:nth-child(3) { width: 20%; } .mm-trk-t th:nth-child(4) { width: 28%; } .mm-trk-t th:nth-child(5) { width: 22%; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.mm-trk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .mm-trk-top h3 { margin: 0; } .mm-trk:not(.open) .mm-trk-body { display: none; } .mm-trk-body { margin-top: 6px; }
 .mm-trk { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--mm-line); } .mm-trk h3 { margin: 0 0 4px; font-size: 16px; }
 .mm-trk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .mm-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.04); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
@@ -2413,8 +2414,11 @@ dash.draw('pl_profile', (el) => {
     const TRK = MM.ok('pl_track') || [];
     const mine = TRK.filter((r) => r.player === x.player);
     if (mine.length) {
-      const sec = h('div', 'mm-trk'); sec.appendChild(h('h3', '', 'Our track record'));
-      sec.appendChild(h('p', 'mm-note', 'Every week our projection is locked before kickoff and never changed afterward. Once the game is played, the real result goes next to it, hits and misses alike. Tracking starts in Week 7.'));
+      const sec = h('div', 'mm-trk'); const tTop = h('div', 'mm-trk-top'); tTop.appendChild(h('h3', '', 'Our track record'));
+      const tTg = h('button', 'mm-why-tg'); tTg.type = 'button'; tTop.appendChild(tTg); sec.appendChild(tTop);
+      const tBody = h('div', 'mm-trk-body'); const tSet = (o) => { sec.classList.toggle('open', o); tTg.textContent = o ? '\u2212' : '+'; tTg.setAttribute('aria-expanded', String(o)); tTg.setAttribute('aria-label', o ? 'Hide track record' : 'Show track record'); };
+      tTg.onclick = () => tSet(!sec.classList.contains('open'));
+      tBody.appendChild(h('p', 'mm-note', 'Every week our projection is locked before kickoff and never changed afterward. Once the game is played, the real result goes next to it, hits and misses alike. Tracking starts in Week 7.'));
       const main = x.pos === 'QB' ? 'Pass Yds' : x.pos === 'RB' ? 'Rush Yds' : 'Rec Yds';
       const opts = ['Fantasy pts', main, x.pos === 'QB' ? 'Pass TD' : 'Receptions'].filter((st, i, a) => a.indexOf(st) === i && mine.some((r) => r.stat === st));
       if (!MMP.trkStat || MMP.trkPlayer !== x.player) { MMP.trkStat = 'Fantasy pts'; MMP.trkPlayer = x.player; }
@@ -2445,8 +2449,9 @@ dash.draw('pl_profile', (el) => {
         if (rows.some((r) => r.status === 'nofp')) sumBox.appendChild(h('p', 'mm-note', 'Week 7 and earlier: we didn\u2019t project fantasy points or touchdowns yet, so only his actual score is shown. Switch to a stat above to see how those projections did.'));
       };
       const sumBox = h('div', 'mm-trk-sumbox');
-      draw(); sec.append(chips, tw, sumBox);
-      sec.appendChild(h('p', 'mm-note', 'Proj = what we projected. Diff = actual minus projected (+ means he beat our number). Green = within about 25% of our number. Red = off by more than about 50%.'));
+      draw(); tBody.append(chips, tw, sumBox);
+      tBody.appendChild(h('p', 'mm-note', 'Proj = what we projected. Diff = actual minus projected (+ means he beat our number). Green = within about 25% of our number. Red = off by more than about 50%.'));
+      sec.appendChild(tBody); tSet(false);
       c.appendChild(sec);
     }
   }
