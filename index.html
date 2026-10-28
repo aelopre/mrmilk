@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027204057', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027204714', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -400,6 +400,9 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-cash-side { display: grid; gap: 4px; min-width: 0; }
 @media (max-width: 860px) { .mm-cash-grid { grid-template-columns: 1fr; } }
 
+.mm-inputs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-width: 70rem; }
+.mm-inputs li { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--mm-txt); background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--mm-cyan); border-radius: 6px; padding: 3px 10px; }
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -410,7 +413,10 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 <div class="mm">
   <header class="mm-head" id="top">
     <div class="mm-brand"><canvas class="mm-logo" data-draw="logo_anim" role="img" aria-label="Mr. Milk logo: a glass football filling with milk past a gold prop line" tabindex="0" title="Replay"></canvas><h1 class="mm-title"><span class="g">Mr.</span> <span class="w">Milk</span></h1><span class="mm-tagline">10K sims · NFL props</span></div>
-    <p class="mm-take">NFL player props from 10,000 simulated games. Week 7 Top Picks went <b data-draw="tp_right" data-source="tp_weeks" data-field="right" data-row="0">—</b>–<b data-draw="tp_wrong" data-source="tp_weeks" data-field="wrong" data-row="0">—</b>. Thursday, the Packers beat the Panthers in <b data-draw="gb_win_head" data-source="sim_games" data-field="home_win" data-row="0">—</b> of the sims.</p>
+    <p class="mm-take">Mr. Milk finds the NFL player props worth playing. Every game is simulated play by play <b>10,000 times</b>, and each pick's chance of cashing comes from blending those sims with the sportsbooks' own prices.</p>
+    <ul class="mm-inputs" aria-label="What goes into the projections">
+      <li>This season's play-by-play</li><li>Player roles: targets, carries, snaps</li><li>Opposing defense vs each position</li><li>Injury reports</li><li>Lines from up to 7 sportsbooks</li><li>Calibrated against how past picks graded</li>
+    </ul>
   </header>
 
   <nav class="mm-tabs" role="tablist" aria-label="Sections">
@@ -1268,8 +1274,8 @@ window.MMSC = (() => {
       const r = rows[p]; const d = r.l3_fpts - r.fpts; if (Math.abs(d) < 5 || Math.abs(d) / r.fpts < 0.25) return;
       if (!trend || Math.abs(d) > Math.abs(trend.d)) trend = { p, d, r };
     });
-    if (trend) { const { p, d, r } = trend, w = r.l3_weeks;
-      out.push({ score: 9, cls: d > 0 ? 'weak' : 'strong', html: `${b(d > 0 ? 'Trending worse vs ' + P[p] : 'Trending better vs ' + P[p])}: ${f1(r.l3_fpts)} fantasy pts per game over Weeks ${w[0]}–${w[w.length - 1]}, vs ${f1(r.fpts)} for the season.` }); }
+    if (trend) { const { p, d, r } = trend;
+      out.push({ score: 9, cls: d > 0 ? 'weak' : 'strong', html: `${b(d > 0 ? 'Trending worse vs ' + P[p] : 'Trending better vs ' + P[p])}: ${f1(r.l3_fpts)} fantasy pts per game over Weeks ${r.l3_from}–${r.l3_to}, vs ${f1(r.fpts)} for the season.` }); }
     // keep the strongest few, at most two lines per position
     out.sort((a, c) => c.score - a.score);
     const per = {}, keep = [];
@@ -1696,10 +1702,17 @@ window.MMV = (() => {
     st.r.snd.onclick = () => sound(st);
     newGame(st, false);
   }
-  const lib = () => { const d = MM.ok('sim_live'); return d ? (Array.isArray(d) ? d[0] : d) : null; };
+  // the library ships as one JSON text field: the dashboard's loader reshapes nested lists inside rows, so the player decodes it itself
+  let LIB = null, LIBSRC = null;
+  const lib = () => {
+    const d = MM.ok('sim_live'); if (!d) return null; const row = Array.isArray(d) ? d[0] : d; if (!row) return null;
+    if (row === LIBSRC && LIB) return LIB;
+    try { const L = typeof row.json === 'string' ? JSON.parse(row.json) : row; if (!L || !Array.isArray(L.players) || !Array.isArray(L.games)) return null; LIB = L; LIBSRC = row; return L; } catch (e) { return null; }
+  };
+  const fail = (el, e) => { console.error('live player', e); el.replaceChildren(); const p = document.createElement('p'); p.className = 'mm-note'; p.textContent = 'The live player could not load this game library. The rest of Sim Center is unaffected.'; el.appendChild(p); };
   dash.draw('live_player', {
-    mount(el) { const st = {}; const L = lib(); if (L) init(el, st, L); return st; },
-    update(el, st) { if (st.L) { if (st.g) idLabel(st); return; } const L = lib(); if (L) init(el, st, L); },
+    mount(el) { const st = {}; try { const L = lib(); if (L) init(el, st, L); } catch (e) { fail(el, e); } return st; },
+    update(el, st) { try { if (st.L) { if (st.g) idLabel(st); return; } const L = lib(); if (L) init(el, st, L); } catch (e) { fail(el, e); } },
     unmount(el, st) { clearTimeout(st.timer); cancelAnimationFrame(st.raf); try { st.src && st.src.stop(); st.ac && st.ac.close(); } catch (e) {} },
   });
 })();
@@ -1722,9 +1735,9 @@ window.MMV = (() => {
       const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
       rows.forEach((r) => {
         const tr = h('tr'); tr.dataset.key = r.id; const n = h('td', String(r.team).toLowerCase()); n.append(h('span', 'nm', r.player), h('span', 'tm', `${r.pos} · ${r.team}`)); tr.appendChild(n);
-        COLS[g].forEach(([k]) => { const v = r[k], td = h('td');
-          if (v && typeof v === 'object') { td.appendChild(h('span', 'v', String(Math.round(v.med)))); td.appendChild(h('span', 'a', v.avg < 20 ? f1(v.avg) : String(Math.round(v.avg)))); }
-          else td.appendChild(h('span', 'pct', pc(v)));
+        COLS[g].forEach(([k]) => { const v = r[k], td = h('td'), md = r[k + '_med'], av = r[k + '_avg'];
+          if (md != null) { td.appendChild(h('span', 'v', String(Math.round(md)))); td.appendChild(h('span', 'a', av < 20 ? f1(av) : String(Math.round(av)))); }
+          else td.appendChild(h('span', 'pct', v == null ? '—' : pc(v)));
           tr.appendChild(td); });
         tb.appendChild(tr);
       });
@@ -1738,7 +1751,7 @@ window.MMV = (() => {
       d.filter((r) => r.group === g).forEach((r) => {
         const row = h('div', 'mm-fr ' + String(r.team).toLowerCase()); row.dataset.key = r.id;
         const left = h('div'); const c = h('div', 'c', r.cat + ' '); c.appendChild(h('span', '', `· ${r.pos} · ${r.team}`)); left.append(c, h('div', 'n', r.player));
-        const bx = h('div', 'bx'); r.boxes.forEach((b) => { const s = h('span'); s.appendChild(h('b', '', b.value)); s.append(b.label); bx.appendChild(s); }); left.appendChild(bx);
+        const bx = h('div', 'bx'); [1, 2, 3].forEach((i) => { if (r[`b${i}_value`] == null) return; const s = h('span'); s.appendChild(h('b', '', r[`b${i}_value`])); s.append(r[`b${i}_label`]); bx.appendChild(s); }); left.appendChild(bx);
         const hero = h('div', 'h'); hero.append(h('b', '', r.hero), h('span', '', r.cap));
         row.append(left, hero); col.appendChild(row);
       });
