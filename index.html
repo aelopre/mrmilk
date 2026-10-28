@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027205031', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027205338', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -1447,7 +1447,16 @@ window.MMV = (() => {
     g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let x = 20; x <= 100; x += 10) { const p = proj(V, x, 8); const n = x <= 60 ? x - 10 : 110 - x; g.font = `400 ${Math.max(8, p.k * 1.7)}px 'MM Bebas', Impact, sans-serif`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(String(n), p.x, p.y); }
     // end zone names
-    [['CAR', 5, '#FFFFFF'], ['GB', 115, '#FFB81C']].forEach(([t, x, c]) => { const p = proj(V, x, 26.65); g.font = `400 ${Math.max(10, p.k * 3.2)}px 'MM Bebas', Impact, sans-serif`; g.fillStyle = c; g.globalAlpha = 0.85; g.fillText(t, p.x, p.y); g.globalAlpha = 1; });
+    // team names run vertically down each end zone (sideline to sideline), faded so they stay in the background
+    [['PANTHERS', 5, '#FFFFFF'], ['PACKERS', 115, '#FFB81C']].forEach(([t, x, c]) => {
+      const a = proj(V, x, 4), b = proj(V, x, 49.3), mid = proj(V, x, 26.65);
+      if (Math.max(a.x, b.x) < -40 || Math.min(a.x, b.x) > W + 40) return;
+      const len = Math.hypot(b.x - a.x, b.y - a.y), ang = Math.atan2(a.y - b.y, a.x - b.x);
+      g.save(); g.translate(mid.x, mid.y); g.rotate(ang + Math.PI);
+      let fs = Math.max(8, mid.k * 5.2); g.font = `400 ${fs}px 'MM Bebas', Impact, sans-serif`;
+      const tw = g.measureText(t).width; if (tw > len * 0.92) { fs *= (len * 0.92) / tw; g.font = `400 ${fs}px 'MM Bebas', Impact, sans-serif`; }
+      g.fillStyle = c; g.globalAlpha = 0.22; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, 0, 0); g.restore(); g.globalAlpha = 1;
+    });
     // line of scrimmage + first down
     line(V.los, 0, V.los, 53.3, 'rgba(80,150,255,.95)', 5);
     if (V.fd != null && V.fd > 0 && V.fd < 120) line(V.fd, 0, V.fd, 53.3, '#FFD43B', 5);
