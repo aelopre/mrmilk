@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027182944', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027192905', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -248,6 +248,90 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-scout li.wk8 b { color: var(--mm-gold); }
 .mm-scout .mm-key { font-size: 13px; color: var(--mm-mut); }
 
+/* live sim player */
+.mm-live-card { gap: 12px; }
+.mm-live-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; }
+.mm-live-id { color: var(--mm-mut); font-size: 14px; font-weight: 600; letter-spacing: .04em; }
+.mm-live { display: grid; gap: 12px; min-width: 0; }
+.mm-live > *, .mm-play, .mm-feed, .mm-feed li, .mm-sb > * { min-width: 0; }
+.mm-live-card { min-width: 0; overflow: hidden; }
+.mm-sb { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; min-height: 64px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+.mm-sb-team { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 16px; font-family: var(--mm-display); }
+.mm-sb-team.away { background: linear-gradient(90deg, #0A3B66, #0085CA); color: #fff; clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%); }
+.mm-sb-team.home { background: linear-gradient(90deg, #1E4D3A, #12261D); color: #FFC93C; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); flex-direction: row-reverse; }
+.mm-sb-name { font-size: clamp(24px, 6vw, 34px); letter-spacing: .03em; display: flex; align-items: center; gap: 8px; }
+.mm-sb-score { font-size: clamp(36px, 9vw, 50px); line-height: 1; font-variant-numeric: tabular-nums; }
+.mm-sb-poss { width: 10px; height: 10px; border-radius: 50%; background: var(--mm-gold); box-shadow: 0 0 8px var(--mm-gold); visibility: hidden; }
+.mm-sb-team.has .mm-sb-poss { visibility: visible; }
+.mm-sb-mid { background: var(--mm-ink); border-top: 2px solid var(--mm-gold); border-bottom: 2px solid var(--mm-gold); padding: 6px 14px; display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 7.5rem; }
+.mm-sb-clock { font-family: var(--mm-display); font-size: 30px; line-height: 1; color: var(--mm-txt); font-variant-numeric: tabular-nums; }
+.mm-sb-dd { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--mm-gold); text-transform: uppercase; white-space: nowrap; }
+.mm-sb-final .mm-sb-clock { color: var(--mm-gold); }
+.mm-field { position: relative; height: 44px; border-radius: 6px; overflow: hidden; background: #1B5432; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.mm-field .ez { position: absolute; top: 0; bottom: 0; width: 8.333%; display: grid; place-items: center; font-family: var(--mm-display); font-size: 15px; letter-spacing: .08em; writing-mode: vertical-rl; }
+.mm-field .ez.a { left: 0; background: #0A4E86; color: #fff; transform: none; writing-mode: vertical-rl; rotate: 180deg; }
+.mm-field .ez.h { right: 0; background: #1E4D3A; color: #FFC93C; }
+.mm-field .lines { position: absolute; top: 0; bottom: 0; left: 8.333%; right: 8.333%; background: repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 10%); }
+.mm-field .mark { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; transition: left .45s ease; }
+.mm-field .los { background: rgba(255,255,255,.85); }
+.mm-field .fd { background: #FFD43B; }
+.mm-field .ball { position: absolute; top: 50%; width: 18px; height: 11px; margin: -6px 0 0 -9px; border-radius: 50%; background: #8A5532; box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.5); transition: left .55s cubic-bezier(.3,.7,.3,1); z-index: 2; }
+.mm-field .ball.td { box-shadow: 0 0 0 2px var(--mm-gold), 0 0 16px var(--mm-gold); }
+.mm-play { display: grid; gap: 6px; }
+.mm-play-now { margin: 0; min-height: 2.6em; font-size: clamp(18px, 4.6vw, 22px); font-weight: 700; line-height: 1.25; color: var(--mm-txt); }
+.mm-play-now.td { color: var(--mm-gold); } .mm-play-now.to { color: var(--mm-miss); }
+.mm-play-now small { display: block; font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--mm-cyan); text-transform: uppercase; }
+.mm-feed { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; max-height: 7.4em; overflow: hidden; }
+.mm-feed li { font-size: 14px; color: var(--mm-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-feed li.td { color: var(--mm-gold); } .mm-feed li.to { color: #FF8A8A; }
+.mm-feed li b { color: var(--mm-txt); font-weight: 700; margin-right: 6px; }
+.mm-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mm-btn { font-family: var(--mm-display); font-size: 20px; letter-spacing: .04em; padding: 7px 16px 5px; border-radius: 8px; border: 1px solid var(--mm-line); background: var(--mm-panel-2); color: var(--mm-txt); cursor: pointer; line-height: 1; }
+.mm-btn:hover { border-color: var(--mm-cyan); }
+.mm-btn:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
+.mm-btn.go { background: var(--mm-gold); color: #1A1204; border-color: var(--mm-gold); }
+.mm-btn[aria-pressed="true"] { background: rgba(63,214,232,.16); border-color: var(--mm-cyan); color: var(--mm-cyan); }
+.mm-seg { display: inline-flex; border: 1px solid var(--mm-line); border-radius: 8px; overflow: hidden; }
+.mm-seg .mm-btn { border: 0; border-radius: 0; background: var(--mm-panel); font-size: 18px; padding: 7px 12px 5px; }
+.mm-seg .mm-btn[aria-pressed="true"] { background: var(--mm-cyan); color: #04212A; }
+.mm-prog { height: 4px; border-radius: 2px; background: var(--mm-line); overflow: hidden; }
+.mm-prog i { display: block; height: 100%; width: 0; background: var(--mm-gold); transition: width .3s linear; }
+.mm-lp-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.mm-lp { background: var(--mm-panel); border: 1px solid var(--mm-line); border-radius: 10px; overflow: hidden; display: grid; align-content: start; }
+.mm-lp-h { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 12px 4px; font-family: var(--mm-display); font-size: 24px; letter-spacing: .03em; }
+.mm-lp-h span { font-family: var(--mm-text); font-size: 12px; font-weight: 700; letter-spacing: .08em; opacity: .85; }
+.mm-lp-h.car { background: linear-gradient(90deg, #0085CA, #0A3B66); color: #fff; } .mm-lp-h.gb { background: linear-gradient(90deg, #1E4D3A, #12261D); color: #FFC93C; }
+.mm-lp-b { padding: 8px 12px 12px; display: grid; gap: 8px; }
+.mm-lp-qb { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mm-lp-qb .n { font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--mm-mut); text-transform: uppercase; }
+.mm-lp-qb .v { font-family: var(--mm-display); font-size: 30px; line-height: 1; color: var(--mm-gold); font-variant-numeric: tabular-nums; }
+.mm-lp-qb .v em { font-style: normal; color: var(--mm-txt); margin-left: 10px; }
+.mm-lp-sub { font-size: 13px; color: var(--mm-mut); margin-top: -4px; }
+.mm-lt { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+.mm-lt th { text-align: right; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--mm-mut); padding: 3px 4px; border-bottom: 1px solid var(--mm-line); }
+.mm-lt th:first-child { text-align: left; color: var(--mm-cyan); }
+.mm-lt td { text-align: right; padding: 3px 4px; font-weight: 700; } .mm-lt td:first-child { text-align: left; font-weight: 600; color: var(--mm-txt); }
+.mm-lt td.g { color: var(--mm-gold); }
+.mm-lt td .p { font-size: 10px; font-weight: 800; letter-spacing: .06em; margin-left: 5px; }
+.mm-lt .p.QB { color: #FF5C5C; } .mm-lt .p.RB { color: #FF9248; } .mm-lt .p.WR { color: #4EA1FF; } .mm-lt .p.TE { color: #A78BFA; }
+.mm-lp-tot { display: flex; gap: 16px; font-size: 13px; color: var(--mm-mut); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; align-items: baseline; }
+.mm-lp-tot b { font-family: var(--mm-display); font-weight: 400; font-size: 24px; color: var(--mm-txt); margin-left: 5px; letter-spacing: 0; }
+.mm-pk { border-top: 2px solid var(--mm-gold-2); padding-top: 6px; display: grid; gap: 8px; }
+.mm-pk-h { display: flex; justify-content: space-between; align-items: baseline; }
+.mm-pk-h b { font-family: var(--mm-display); font-weight: 400; font-size: 21px; color: var(--mm-gold); letter-spacing: .03em; }
+.mm-pk-h span { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--mm-mut); }
+.mm-pk-r { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; align-items: center; }
+.mm-pk-r .t { font-size: 14px; font-weight: 700; color: var(--mm-txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-pk-r .s { font-size: 12px; font-weight: 800; letter-spacing: .06em; padding: 1px 8px; border-radius: 5px; border: 1px solid currentColor; justify-self: end; color: var(--mm-mut); }
+.mm-pk-r .s.hit { color: var(--mm-hit); background: rgba(70,224,145,.12); } .mm-pk-r .s.miss { color: var(--mm-miss); background: rgba(255,92,92,.12); } .mm-pk-r .s.push { color: #B8C2D8; }
+.mm-pk-r .bar { position: relative; height: 7px; border-radius: 3px; background: #1C2646; }
+.mm-pk-r .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; transition: width .4s ease, background .3s; }
+.mm-pk-r .bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #EBF0FA; }
+.mm-pk-r .v { font-family: var(--mm-display); font-size: 20px; line-height: 1; text-align: right; min-width: 2.2em; }
+.mm-live-end { margin: 0; padding: 10px 14px; border-radius: 8px; background: rgba(255,190,46,.10); border-left: 3px solid var(--mm-gold); font-size: 17px; }
+.mm-live-end b { color: var(--mm-gold); }
+@media (max-width: 480px) { .mm-sb-team { padding: 4px 10px; gap: 4px; } .mm-sb-name { font-size: 20px; gap: 5px; } .mm-sb-score { font-size: 34px; } .mm-sb-team.away { padding-left: 16px; } .mm-sb-team.home { padding-right: 16px; } .mm-sb-mid { min-width: 0; padding: 6px 8px; } .mm-sb-dd { font-size: 11px; } .mm-sb-clock { font-size: 24px; } .mm-btn { font-size: 18px; padding: 7px 12px 5px; } }
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -320,6 +404,11 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     </div>
     <p class="mm-note mm-nosim" hidden>This game hasn't been simulated yet. Sims for every game are coming once the simulator is set up for all 32 teams. Its best picks above and the Prop explorer already cover it.</p>
     <div class="mm-stack mm-simblock">
+    <div class="mm-card mm-live-card" id="live-card">
+      <div class="mm-live-top"><h2>Watch a sim live</h2><span class="mm-live-id"></span></div>
+      <p class="mm-note">One of 500 full games from the same engine as the 10,000 sims, played back snap by snap. Watch Mr. Milk's picks cash (or not) as it goes. Sim it again for a different game; every one is a real outcome the model can produce.</p>
+      <div class="mm-live" data-draw="live_player" data-source="sim_live"></div>
+    </div>
     <div class="mm-card" id="game-card">
       <h2>Panthers @ Packers</h2>
       <p class="mm-note"><span data-draw="kickoff" data-source="sim_games" data-field="kickoff" data-row="0">—</span> · <span data-draw="sims_n" data-source="sim_games" data-field="sims" data-row="0">—</span> simulated games, play by play. Featured game in the video: <span data-draw="featured" data-source="sim_games" data-field="featured" data-row="0">—</span>.</p>
@@ -1165,6 +1254,202 @@ dash.draw('dvp_scout', (el) => {
   el.appendChild(ul);
   const k = document.createElement('p'); k.className = 'mm-key'; k.textContent = 'Green = good for offenses (soft spot), red = tough spot. Only top-3/bottom-3 stats and big swings make the list. EPA = expected points added: how much each play helps the offense score.'; el.appendChild(k);
 });
+</script>
+<script>
+/* ---------- live sim player: replays one of 500 pre-simulated games, play by play ---------- */
+(() => {
+  const NM = { CAR: 'Panthers', GB: 'Packers' };
+  const fmtClock = (t) => { t = Math.max(0, t); const q = t <= 0 ? 4 : Math.min(4, 4 - Math.floor((t - 1) / 900)); const r = Math.max(0, t - (4 - q) * 900); return [q, `${Math.floor(r / 60)}:${String(Math.round(r % 60)).padStart(2, '0')}`]; };
+  const ORD = ['', '1st', '2nd', '3rd', '4th'];
+  const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const last = (n) => n.split(' ').slice(1).join(' ') || n;
+  const SHORT = { ryd: 'RUSH YDS', yd: 'REC YDS', rec: 'REC', att: 'PASS ATT', ptd: 'PASS TD', car: 'RUSH ATT', pyd: 'PASS YDS', cmp: 'CMP', tgt: 'TGT' };
+  function playText(L, g, p) {
+    const T = ['CAR', 'GB'], off = T[p[0]], def = T[1 - p[0]], type = L.types[p[1]], sub = L.subs[p[2]], gain = p[8], who = p[9] >= 0 ? L.players[p[9]] : null, ex = p[10], fl = p[11];
+    const qb = L.players[L.team.findIndex((t, i) => t === off && L.pos[i] === 'QB')];
+    const td = fl & 1, xpMiss = fl & 8 ? ' (extra point missed)' : '';
+    let s;
+    if (type === 'kickoff') s = p[3] >= 3599 ? `${NM[off]} receive the opening kickoff. Touchback, ball at the ${off} 35.` : `Second half: ${NM[off]} ball at their own 35.`;
+    else if (type === 'kneel') s = `${qb} takes a knee.`;
+    else if (type === 'fg') s = `${off} ${ex}-yard field goal is ${fl & 4 ? 'GOOD' : 'NO GOOD'}.`;
+    else if (type === 'punt') s = `${off} punts ${ex} yards${fl & 32 ? ', touchback' : ''}.`;
+    else if (type === 'safety') s = `SAFETY! 2 points for ${def}.`;
+    else if (type === 'sack') s = `${qb} SACKED for a loss of ${Math.abs(gain)}.`;
+    else if (type === 'penalty') s = sub === 'dpi' ? `Pass interference on ${def}, ${gain} yards and an automatic first down.` : sub === 'hold' ? `Holding on ${off}: the ${who ? last(who) + ' play' : 'play'} comes back, 10-yard penalty.` : gain < 0 ? `False start on ${off}, 5 yards.` : `Offside on ${def}, 5 yards.`;
+    else if (type === 'pass') s = sub === 'inc' ? `${qb} incomplete, intended for ${who}.` : sub === 'int' ? `INTERCEPTED! ${qb}'s pass for ${who} is picked off by ${def}.` : sub === 'fumble' ? `${qb} to ${who} for ${gain}, but he FUMBLES. ${def} recovers!` : td ? `TOUCHDOWN ${NM[off].toUpperCase()}! ${qb} to ${who}, ${gain} yards.${xpMiss}` : `${qb} to ${who} for ${gain} yard${Math.abs(gain) === 1 ? '' : 's'}.`;
+    else if (type === 'run') s = sub === 'fumble' ? `${who} runs for ${gain}, FUMBLE! ${def} recovers.` : td ? `TOUCHDOWN ${NM[off].toUpperCase()}! ${who} ${sub === 'scramble' ? 'scrambles' : 'runs'} in from ${gain}.${xpMiss}` : sub === 'scramble' ? `${who} keeps it for ${gain} yard${Math.abs(gain) === 1 ? '' : 's'}.` : `${who} runs ${sub} for ${gain} yard${Math.abs(gain) === 1 ? '' : 's'}.`;
+    else s = '';
+    if (fl & 16) s += ' Turnover on downs.';
+    const cls = (td || type === 'safety') ? 'td' : (sub === 'int' || sub === 'fumble' || (fl & 16) || (type === 'fg' && !(fl & 4))) ? 'to' : '';
+    return [s, cls];
+  }
+  function build(el) {
+    el.replaceChildren();
+    const r = {};
+    const sb = h('div', 'mm-sb'); r.sb = sb;
+    const tm = (side, t) => { const d = h('div', 'mm-sb-team ' + side); const n = h('span', 'mm-sb-name'); const dot = h('i', 'mm-sb-poss'); n.append(side === 'away' ? t : '', dot, side === 'home' ? t : ''); const sc = h('span', 'mm-sb-score', '0'); d.append(n, sc); return [d, sc]; };
+    [r.away, r.as] = tm('away', 'CAR'); [r.home, r.hs] = tm('home', 'GB');
+    const mid = h('div', 'mm-sb-mid'); r.clock = h('span', 'mm-sb-clock', 'Q1 15:00'); r.dd = h('span', 'mm-sb-dd', 'Kickoff'); mid.append(r.clock, r.dd);
+    sb.append(r.away, mid, r.home);
+    const f = h('div', 'mm-field'); f.setAttribute('aria-hidden', 'true');
+    f.append(h('div', 'ez a', 'CAR'), h('div', 'ez h', 'GB'), h('div', 'lines'));
+    r.los = h('div', 'mark los'); r.fd = h('div', 'mark fd'); r.ball = h('div', 'ball'); f.append(r.los, r.fd, r.ball);
+    const play = h('div', 'mm-play'); r.now = h('p', 'mm-play-now'); r.now.setAttribute('aria-live', 'polite'); r.feed = h('ul', 'mm-feed'); play.append(r.now, r.feed);
+    r.prog = h('div', 'mm-prog'); r.progI = h('i'); r.prog.appendChild(r.progI);
+    const ctl = h('div', 'mm-ctl');
+    r.play = h('button', 'mm-btn go', '▶ Play'); r.play.type = 'button';
+    const seg = h('div', 'mm-seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Speed');
+    r.speeds = [1, 2, 4].map((v) => { const b = h('button', 'mm-btn', v + 'x'); b.type = 'button'; b.dataset.v = v; b.setAttribute('aria-pressed', String(v === 1)); seg.appendChild(b); return b; });
+    r.skip = h('button', 'mm-btn', 'Skip to final'); r.skip.type = 'button';
+    r.again = h('button', 'mm-btn', '↻ Sim it again'); r.again.type = 'button';
+    r.snd = h('button', 'mm-btn', '♪ Sound off'); r.snd.type = 'button'; r.snd.setAttribute('aria-pressed', 'false');
+    ctl.append(r.play, seg, r.skip, r.again, r.snd);
+    r.end = h('p', 'mm-live-end'); r.end.hidden = true;
+    r.grid = h('div', 'mm-lp-grid'); r.panels = {};
+    ['CAR', 'GB'].forEach((t) => { const p = h('div', 'mm-lp'); const hd = h('div', 'mm-lp-h ' + t.toLowerCase(), NM[t]); hd.appendChild(h('span', '', 'LIVE STATS')); const b = h('div', 'mm-lp-b'); p.append(hd, b); r.grid.appendChild(p); r.panels[t] = b; });
+    el.append(sb, f, play, r.prog, ctl, r.end, r.grid);
+    return r;
+  }
+  function makeGame(L, gi) {
+    const G = L.games[gi];
+    return { gi, G, i: 0, stats: L.players.map(() => new Array(L.stats.length).fill(0)), fds: [0, 0], feed: [], score: [0, 0], final: false };
+  }
+  function render(st) {
+    const L = st.L, g = st.g, r = st.r, T = ['CAR', 'GB'];
+    const p = g.G.plays[Math.min(g.i, g.G.plays.length - 1)];
+    // scorebug
+    r.as.textContent = g.score[0]; r.hs.textContent = g.score[1];
+    if (g.final) {
+      r.sb.classList.add('mm-sb-final'); r.clock.textContent = 'FINAL'; r.dd.textContent = g.score[1] > g.score[0] ? 'Packers win' : g.score[0] > g.score[1] ? 'Panthers win' : 'Tie';
+      r.away.classList.remove('has'); r.home.classList.remove('has');
+    } else {
+      r.sb.classList.remove('mm-sb-final');
+      const [q, c] = fmtClock(st.phase === 'post' ? p[4] : p[3]); r.clock.textContent = `Q${q} ${c}`;
+      const off = T[p[0]], def = T[1 - p[0]], yl = p[5];
+      const spot = yl === 50 ? 'midfield' : yl > 50 ? `${off} ${100 - yl}` : `${def} ${yl}`;
+      const type = L.types[p[1]];
+      r.dd.textContent = type === 'kickoff' ? 'Kickoff' : `${ORD[p[6]] || ''} & ${p[7] >= yl ? 'Goal' : p[7]} · ${spot}`;
+      r.away.classList.toggle('has', p[0] === 0); r.home.classList.toggle('has', p[0] === 1);
+      // field: CAR goal on the left (x=0), GB goal on the right (x=100)
+      const X = (yd) => `${((10 + yd) / 120) * 100}%`;
+      const fromLeft = (off === 'CAR') ? (100 - yl) : yl;
+      const fdYl = Math.max(0, yl - p[7]); const fdLeft = (off === 'CAR') ? (100 - fdYl) : fdYl;
+      r.los.style.left = X(fromLeft); r.fd.style.left = X(fdLeft); r.fd.style.display = type === 'kickoff' ? 'none' : '';
+      let bx = fromLeft;
+      if (st.phase === 'post') { const gn = L.types[p[1]] === 'pass' || L.types[p[1]] === 'run' || L.types[p[1]] === 'sack' ? p[8] : 0; bx = off === 'CAR' ? fromLeft + gn : fromLeft - gn; }
+      r.ball.style.left = X(Math.max(-8, Math.min(108, bx)));
+      r.ball.classList.toggle('td', st.phase === 'post' && !!(p[11] & 1));
+    }
+    r.progI.style.width = `${(g.final ? 1 : g.i / g.G.plays.length) * 100}%`;
+    // play text + feed
+    if (st.phase === 'post' || g.final) {
+      const [s, cls] = g.final ? [g.score[1] > g.score[0] ? `Final: Packers ${g.score[1]}, Panthers ${g.score[0]}.` : g.score[0] > g.score[1] ? `Final: Panthers ${g.score[0]}, Packers ${g.score[1]}.` : `Final: ${g.score[0]}–${g.score[1]} tie.`, 'td'] : playText(L, g, p);
+      r.now.replaceChildren(); r.now.className = 'mm-play-now ' + cls; r.now.textContent = s;
+    } else { r.now.className = 'mm-play-now'; r.now.textContent = ''; const sm = h('small', '', `${T[p[0]]} ball`); r.now.appendChild(sm); r.now.append('…'); }
+    r.feed.replaceChildren(); g.feed.slice(st.phase === 'post' && !g.final ? 1 : 0).slice(0, 5).forEach(([s, cls, lab]) => { const li = h('li', cls); li.appendChild(h('b', '', lab)); li.append(s); r.feed.appendChild(li); });
+    // panels
+    ['CAR', 'GB'].forEach((t) => panel(st, t));
+    // end summary
+    if (g.final) {
+      const res = L.picks.map((pk) => pstate(st, pk).st); const hit = res.filter((x) => x === 'hit').length, push = res.filter((x) => x === 'push').length;
+      r.end.hidden = false; r.end.replaceChildren(); const b = h('b', '', `Mr. Milk picks: ${hit} of ${L.picks.length} cashed`); r.end.append(b, ` in this game${push ? ` (${push} push)` : ''}. Across all 10,000 sims, the average is ${d3.format('.1f')(d3.sum(L.picks, (x) => x.cash))}. Tap Sim it again for another game.`);
+    } else r.end.hidden = true;
+    r.play.textContent = g.final ? '↺ Replay' : st.playing ? '❚❚ Pause' : (g.i === 0 && st.phase === 'pre' ? '▶ Play' : '▶ Resume');
+  }
+  function pstate(st, pk) {
+    const pi = st.L.players.indexOf(pk.player); const v = pi >= 0 ? st.g.stats[pi][pk.stat] : 0; const ln = pk.line, over = pk.side === 'Over', fin = st.g.final;
+    let s = 'live';
+    if (over) s = v > ln ? 'hit' : fin ? (v === ln ? 'push' : 'miss') : 'live';
+    else s = v > ln ? 'miss' : fin ? (v === ln ? 'push' : 'hit') : 'live';
+    return { v, ln, over, st: s };
+  }
+  function panel(st, t) {
+    const L = st.L, g = st.g, b = st.r.panels[t]; b.replaceChildren();
+    const idx = L.players.map((n, i) => i).filter((i) => L.team[i] === t);
+    const S = (i, k) => g.stats[i][L.stats.indexOf(k)];
+    const qb = idx.find((i) => L.pos[i] === 'QB');
+    const q = h('div', 'mm-lp-qb'); q.appendChild(h('span', 'n', `QB ${L.players[qb]}`));
+    const v = h('span', 'v', `${S(qb, 'cmp')}/${S(qb, 'att')}`); v.appendChild(h('em', '', `${S(qb, 'pyd')} YDS`)); q.appendChild(v);
+    b.append(q, h('div', 'mm-lp-sub', `${S(qb, 'ptd')} TD · ${S(qb, 'int')} INT · ${S(qb, 'sk')} sacked`));
+    const tbl = (title, cols, rows) => {
+      if (!rows.length) return; const tb = h('table', 'mm-lt'); const hr = h('tr'); hr.appendChild(h('th', '', title)); cols.forEach(([lab]) => hr.appendChild(h('th', '', lab))); const th = h('thead'); th.appendChild(hr); tb.appendChild(th);
+      const bd = h('tbody'); rows.forEach((i) => { const tr = h('tr'); const n = h('td', '', L.players[i]); n.appendChild(h('span', 'p ' + L.pos[i], L.pos[i])); tr.appendChild(n); cols.forEach(([lab, fn, gold]) => { const val = fn(i); tr.appendChild(h('td', gold && val ? 'g' : '', String(val))); }); bd.appendChild(tr); }); tb.appendChild(bd); b.appendChild(tb);
+    };
+    tbl('RUSHING', [['CAR', (i) => S(i, 'car')], ['YDS', (i) => S(i, 'ryd')], ['TD', (i) => S(i, 'rtd'), 1]], idx.filter((i) => S(i, 'car') > 0).sort((a, c) => S(c, 'car') - S(a, 'car')).slice(0, 4));
+    tbl('RECEIVING', [['REC', (i) => `${S(i, 'rec')}/${S(i, 'tgt')}`], ['YDS', (i) => S(i, 'yd')], ['TD', (i) => S(i, 'td'), 1]], idx.filter((i) => S(i, 'tgt') > 0).sort((a, c) => S(c, 'yd') - S(a, 'yd') || S(c, 'rec') - S(a, 'rec')).slice(0, 6));
+    const tot = idx.reduce((s, i) => s + S(i, 'pyd') + S(i, 'ryd'), 0);
+    const tt = h('div', 'mm-lp-tot'); const a = h('span', '', 'Total yds'); a.appendChild(h('b', '', String(tot))); const c = h('span', '', '1st downs'); c.appendChild(h('b', '', String(g.fds[t === 'CAR' ? 0 : 1]))); tt.append(a, c); b.appendChild(tt);
+    const pks = L.picks.filter((x) => x.team === t); if (!pks.length) return;
+    const pk = h('div', 'mm-pk'); const ph = h('div', 'mm-pk-h'); ph.append(h('b', '', 'Mr. Milk picks'), h('span', '', 'LIVE · 10K CASH %')); pk.appendChild(ph);
+    pks.forEach((x) => {
+      const s = pstate(st, x); const row = h('div', 'mm-pk-r');
+      row.appendChild(h('span', 't', `${last(x.player).toUpperCase()} ${s.over ? 'O' : 'U'} ${x.line} ${SHORT[x.key] || x.prop.toUpperCase()}`));
+      row.appendChild(s.st === 'live' ? h('span', 's', d3.format('.0%')(x.cash)) : h('span', 's ' + s.st, s.st === 'hit' ? 'HIT' : s.st === 'push' ? 'PUSH' : 'MISS'));
+      const bar = h('div', 'bar'); const mx = Math.max(x.line * 1.6, x.line + 2, s.v * 1.05); const fill = h('i'); fill.style.width = `${Math.min(1, s.v / mx) * 100}%`;
+      fill.style.background = s.st === 'hit' ? 'var(--mm-hit)' : s.st === 'miss' ? 'var(--mm-miss)' : s.st === 'push' ? '#8C9AB8' : (s.over ? 'var(--mm-gold)' : 'var(--mm-cyan)');
+      const tick = h('u'); tick.style.left = `${(x.line / mx) * 100}%`; bar.append(fill, tick);
+      row.append(bar, h('span', 'v', String(s.v))); pk.appendChild(row);
+    });
+    b.appendChild(pk);
+  }
+  function applyPlay(st) {
+    const L = st.L, g = st.g, p = g.G.plays[g.i];
+    const d = p[14]; for (let k = 0; k < d.length; k += 3) g.stats[d[k]][d[k + 1]] += d[k + 2];
+    if (p[11] & 2) g.fds[p[0]] += 1;
+    g.score = [p[12], p[13]];
+    const [s, cls] = playText(L, g, p); const [q, c] = fmtClock(p[3]);
+    if (L.types[p[1]] !== 'kickoff' || g.i > 0) g.feed.unshift([s, cls, `Q${q} ${c}`]);
+  }
+  const DUR = { pre: 420, post: 760 };
+  function step(st) {
+    clearTimeout(st.timer); if (!st.playing) return;
+    const sec = document.getElementById('sims');
+    if (document.hidden || (sec && sec.hidden)) { st.playing = false; render(st); return; }
+    const g = st.g;
+    if (st.phase === 'pre') { st.phase = 'post'; applyPlay(st); render(st);
+      const p = g.G.plays[g.i]; const big = (p[11] & 1) || st.L.subs[p[2]] === 'int' || st.L.subs[p[2]] === 'fumble' || st.L.types[p[1]] === 'fg';
+      st.timer = setTimeout(() => step(st), (DUR.post + (big ? 900 : 0)) / st.speed); return; }
+    g.i += 1;
+    if (g.i >= g.G.plays.length) { g.final = true; g.i = g.G.plays.length; st.playing = false; render(st); return; }
+    st.phase = 'pre'; render(st); st.timer = setTimeout(() => step(st), DUR.pre / st.speed);
+  }
+  function newGame(st, autoplay) {
+    clearTimeout(st.timer); let gi; do { gi = Math.floor(Math.random() * st.L.games.length); } while (st.L.games.length > 1 && st.g && gi === st.g.gi);
+    st.g = makeGame(st.L, gi); st.phase = 'pre'; st.playing = !!autoplay; render(st); idLabel(st);
+    if (autoplay) st.timer = setTimeout(() => step(st), 500 / st.speed);
+  }
+  function idLabel(st) { document.querySelectorAll('.mm-live-id').forEach((e) => { e.textContent = st.g ? `Game ${st.g.gi + 1} of ${st.L.games.length}` : ''; }); }
+  // sound: the Mr. Milk beat, looped with Web Audio (phones need a tap first, which the button is)
+  async function sound(st) {
+    st.sound = !st.sound; st.r.snd.textContent = st.sound ? '♪ Sound on' : '♪ Sound off'; st.r.snd.setAttribute('aria-pressed', String(st.sound));
+    try {
+      if (!st.ac) { const AC = window.AudioContext || window.webkitAudioContext; st.ac = new AC(); st.gain = st.ac.createGain(); st.gain.connect(st.ac.destination); }
+      if (st.ac.state === 'suspended') await st.ac.resume();
+      if (!st.buf && st.sound) { const res = await fetch(st.L.beat); st.buf = await st.ac.decodeAudioData(await res.arrayBuffer()); }
+      if (st.sound && !st.src) { st.src = st.ac.createBufferSource(); st.src.buffer = st.buf; st.src.loop = true; st.src.connect(st.gain); st.src.start(); }
+      st.gain.gain.setTargetAtTime(st.sound ? 0.55 : 0, st.ac.currentTime, 0.08);
+    } catch (e) { st.r.snd.textContent = '♪ Sound unavailable'; }
+  }
+  function init(el, st, L) {
+    st.L = L; st.speed = 1; st.r = build(el);
+    st.r.play.onclick = () => {
+      if (st.g.final) { st.g = makeGame(L, st.g.gi); st.phase = 'pre'; }
+      st.playing = !st.playing; render(st); if (st.playing) step(st); else clearTimeout(st.timer);
+    };
+    st.r.speeds.forEach((b) => b.onclick = () => { st.speed = +b.dataset.v; st.r.speeds.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (st.playing) { clearTimeout(st.timer); st.timer = setTimeout(() => step(st), 150); } });
+    st.r.skip.onclick = () => { clearTimeout(st.timer); const g = st.g; if (st.phase === 'pre' && g.i < g.G.plays.length && !g.final) applyPlay(st);
+      for (g.i += 1; g.i < g.G.plays.length; g.i += 1) applyPlay(st); g.final = true; st.playing = false; render(st); };
+    st.r.again.onclick = () => newGame(st, true);
+    st.r.snd.onclick = () => sound(st);
+    newGame(st, false);
+  }
+  const lib = () => { const d = MM.ok('sim_live'); return d ? (Array.isArray(d) ? d[0] : d) : null; };
+  dash.draw('live_player', {
+    mount(el) { const st = {}; const L = lib(); if (L) init(el, st, L); return st; },
+    update(el, st) { if (st.L) { if (st.g) idLabel(st); return; } const L = lib(); if (L) init(el, st, L); },
+    unmount(el, st) { clearTimeout(st.timer); try { st.src && st.src.stop(); st.ac && st.ac.close(); } catch (e) {} },
+  });
+})();
 </script>
 
 </div>
