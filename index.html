@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027205837', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027215154', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -405,6 +405,62 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-inputs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-width: 70rem; }
 .mm-inputs li { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--mm-txt); background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--mm-cyan); border-radius: 6px; padding: 3px 10px; }
 
+/* players tab + profiles */
+.mm-pl-layout { display: grid; gap: 16px; grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr); align-items: start; }
+.mm-pl-list { display: grid; gap: 4px; max-height: 78vh; overflow: auto; padding-right: 4px; position: sticky; top: 8px; }
+.mm-pl-item { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 7px 10px; border-radius: 8px; background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--pc, var(--mm-line)); }
+.mm-pl-item:hover { border-color: var(--mm-cyan); }
+.mm-pl-item[aria-current="true"] { background: rgba(255,190,46,.12); border-color: var(--mm-gold); }
+.mm-pl-item:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 1px; }
+.mm-pl-item .n { font-weight: 700; font-size: 15px; color: var(--mm-txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-pl-item .m { font-size: 12px; color: var(--mm-mut); grid-column: 1; }
+.mm-pl-item .p { grid-row: 1 / span 2; grid-column: 2; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--pc); }
+.pos-QB { --pc: #FF5C5C; } .pos-RB { --pc: #FF9248; } .pos-WR { --pc: #4EA1FF; } .pos-TE { --pc: #A78BFA; }
+.mm-pl-empty { color: var(--mm-mut); font-size: 15px; padding: 18px; border: 1px dashed var(--mm-line); border-radius: 10px; }
+.mm-pf { display: grid; gap: 16px; min-width: 0; }
+.mm-pf-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 16px 18px; border-radius: 12px; border: 1px solid var(--mm-line); background: linear-gradient(110deg, var(--tb, #152140) 0%, rgba(16,26,48,.95) 55%); }
+.mm-pf-name { font-family: var(--mm-display); font-size: clamp(34px, 7vw, 54px); line-height: .95; margin: 0; color: #fff; letter-spacing: .01em; }
+.mm-pf-sub { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 15px; color: #DCE4F2; }
+.mm-pf-sub .pos { font-weight: 800; letter-spacing: .06em; color: var(--pc); }
+.mm-pf-status { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 9px; border-radius: 5px; border: 1px solid currentColor; color: var(--mm-hit); }
+.mm-pf-status.q { color: var(--mm-gold); } .mm-pf-status.o { color: var(--mm-miss); }
+.mm-pf-roles { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.mm-pf-roles span { background: rgba(7,11,24,.45); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 4px 10px; font-size: 13px; color: #C9D3E6; }
+.mm-pf-roles b { font-family: var(--mm-display); font-weight: 400; font-size: 22px; color: #fff; margin-right: 5px; letter-spacing: .01em; }
+.mm-pf-back { display: none; }
+.mm-pf-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: start; }
+.mm-pf-props td.l { color: var(--mm-gold); }
+.mm-pf-props tbody tr { cursor: pointer; }
+.mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
+.mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
+.mm-pf-match { display: grid; gap: 8px; }
+.mm-pf-match .big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.mm-pf-match .big b { font-family: var(--mm-display); font-weight: 400; font-size: 44px; line-height: 1; }
+.mm-pf-match ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.mm-pf-match li { font-size: 15px; line-height: 1.35; padding-left: 14px; position: relative; }
+.mm-pf-match li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 2px; background: var(--d, var(--mm-mut)); }
+.mm-pf-match li.weak { --d: var(--mm-hit); } .mm-pf-match li.strong { --d: var(--mm-miss); }
+.mm-pf-match li b { color: var(--mm-txt); }
+.mm-link { all: unset; cursor: pointer; color: var(--mm-cyan); font-weight: 700; font-size: 14px; }
+.mm-link:hover { text-decoration: underline; }
+.mm-link:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; border-radius: 3px; }
+.mm-pf-sim { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 8px; }
+.mm-pf-sim div { background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--mm-cyan); border-radius: 8px; padding: 6px 10px; display: grid; }
+.mm-pf-sim .l { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--mm-cyan); text-transform: uppercase; }
+.mm-pf-sim .v { font-family: var(--mm-display); font-size: 28px; line-height: 1.05; }
+.mm-pf-sim .s { font-size: 12px; color: var(--mm-mut); }
+.mm-pf-log td.o { color: var(--mm-hit); } .mm-pf-log td.u { color: #FF7A7A; }
+.mm-pf-log th.k { color: var(--mm-gold); }
+/* clickable player names elsewhere */
+#thu-table tbody td:first-child, #board-table tbody td:nth-child(2), #best-table tbody td:first-child, #scorers-table tbody td:first-child, .mm-lt tbody td:first-child, .mm-med .nm, .mm-fr .n { cursor: pointer; }
+#thu-table tbody td:first-child:hover, #board-table tbody td:nth-child(2):hover, #best-table tbody td:first-child:hover, #scorers-table tbody td:first-child:hover, .mm-lt tbody td:first-child:hover, .mm-med .nm:hover, .mm-fr .n:hover { color: var(--mm-gold); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 860px) {
+  .mm-pl-layout { grid-template-columns: 1fr; }
+  .mm-pl-list { position: static; max-height: none; }
+  .mm-pl-layout.has-player .mm-pl-list { display: none; }
+  .mm-pl-layout.has-player .mm-pf-back { display: inline-block; }
+}
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -424,6 +480,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     <button class="mm-tab" role="tab" id="tab-record" data-page="record" aria-selected="false">Track record</button>
     <button class="mm-tab" role="tab" id="tab-explorer" data-page="explorer" aria-selected="false">Prop explorer</button>
     <button class="mm-tab" role="tab" id="tab-dvp" data-page="dvp" aria-selected="false">Defense vs position</button>
+    <button class="mm-tab" role="tab" id="tab-players" data-page="players" aria-selected="false">Players</button>
   </nav>
 
   <!-- ===================== TOP PICKS ===================== -->
@@ -644,6 +701,21 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       </div>
     </div>
   </section>
+
+  <!-- ===================== PLAYERS ===================== -->
+  <section class="mm-page" id="players" role="tabpanel" aria-labelledby="tab-players" hidden>
+    <div class="mm-controls">
+      <label class="mm-search">Find a player <input class="mm-pl-search" type="search" list="pl-search-list" placeholder="Type a name, e.g. Puka" autocomplete="off" aria-label="Find a player"></label>
+      <datalist id="pl-search-list" data-draw="pl_search_list" data-source="proj_players"></datalist>
+      <label>Team <select data-draw="pl_team_sel" data-source="proj_players"></select></label>
+      <label>Position <select data-draw="pl_pos_sel" data-source="proj_players"></select></label>
+    </div>
+    <div class="mm-pl-layout">
+      <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
+      <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
+    </div>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+  </section>
 </div>
 
 <script>
@@ -737,7 +809,7 @@ window.MM = (() => {
   };
   document.querySelectorAll('.mm-tab').forEach((b) => b.addEventListener('click', () => { show(b.dataset.page); dash.setLink(b.dataset.page); }));
   const start = location.hash.slice(1);
-  if (['picks', 'sims', 'record', 'explorer', 'dvp'].includes(start)) show(start);
+  if (['picks', 'sims', 'record', 'explorer', 'dvp', 'players'].includes(start)) show(start);
 })();
 </script>
 
@@ -1818,6 +1890,198 @@ document.querySelectorAll('.mm-med-team .mm-btn').forEach((b) => b.addEventListe
     el.textContent = `Out of 10 picks. Most common: ${mode.hits} cashed (${d3.format('.0%')(mode.share)} of games). Average ${d3.format('.1f')(avg)}. 6 or more cashed in ${d3.format('.0%')(six)} of games (cyan + gold).`;
   });
 })();
+</script>
+<script>
+/* ---------- players tab + player profiles ---------- */
+window.MMP = (() => {
+  const TB = { ARI: '#97233F', ATL: '#A71930', BAL: '#241773', BUF: '#00338D', CAR: '#0085CA', CHI: '#0B162A', CIN: '#FB4F14', CLE: '#311D00', DAL: '#003594', DEN: '#FB4F14', DET: '#0076B6', GB: '#1E4D3A', HOU: '#03202F', IND: '#002C5F', JAX: '#006778', KC: '#E31837', LV: '#000000', LAC: '#0080C6', LAR: '#003594', MIA: '#008E97', MIN: '#4F2683', NE: '#002244', NO: '#101820', NYG: '#0B2265', NYJ: '#125740', PHI: '#004C54', PIT: '#101820', SF: '#AA0000', SEA: '#002244', TB: '#D50A0A', TEN: '#0C2340', WAS: '#5A1414' };
+  const MAIN = { QB: 'Pass Yds', RB: 'Rush Yds', WR: 'Rec Yds', TE: 'Rec Yds' };
+  const ORDER = ['Pass Yds', 'Pass Att', 'Completions', 'Pass TD', 'Rush Yds', 'Rush Att', 'Receptions', 'Rec Yds', 'Targets'];
+  const LOGK = { 'Pass Yds': 'pyd', 'Pass Att': 'att', Completions: 'cmp', 'Pass TD': 'ptd', 'Rush Yds': 'ryd', 'Rush Att': 'car', Receptions: 'rec', 'Rec Yds': 'yd', Targets: 'tgt' };
+  const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const pc = d3.format('.0%'), f1 = d3.format('.1f');
+  const ord = (n) => { const v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); };
+  const players = () => {
+    const P = MM.ok('proj_players'); if (!P) return null;
+    const m = new Map(); P.forEach((r) => { if (!m.has(r.player)) m.set(r.player, { player: r.player, team: r.team, pos: r.pos, opp: r.opp, game: r.game, kickoff: r.kickoff, status: r.status, out: r.projection == null, rows: [] }); const e = m.get(r.player); if (!e.rows.some((q) => q.stat === r.stat)) e.rows.push(r); });
+    return m;
+  };
+  let CACHE = null, CSRC = null;
+  const all = () => { const P = MM.ok('proj_players'); if (P !== CSRC) { CSRC = P; CACHE = players(); } return CACHE; };
+  // the line to judge a stat by: a posted sportsbook line if there is one, else just under the median
+  function lineFor(name, stat, row) {
+    const L = MM.ok('pl_lines'); const b = L && L.find((x) => x.player === name && x.stat === stat);
+    const book = b && (b.dk_line ?? b.fd_line ?? b.mgm_line ?? b.pp);
+    if (book != null) return { line: book, src: 'book', b };
+    if (!row || row.median == null) return null;
+    return { line: Math.floor(row.median) + 0.5, src: 'model', b };
+  }
+  function open(name) {
+    const m = all(); if (!m || !m.has(name)) return false;
+    dash.setParams({ pl: name });
+    const tab = document.getElementById('tab-players'); if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+    const top = document.getElementById('players'); if (top && top.scrollIntoView) top.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return true;
+  }
+  return { TB, MAIN, ORDER, LOGK, h, pc, f1, ord, all, lineFor, open };
+})();
+// any player name in the dashboard's tables opens his profile
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('#thu-table tbody td:first-child, #board-table tbody td:nth-child(2), #best-table tbody td:first-child, #scorers-table tbody td:first-child, .mm-lt tbody td:first-child, .mm-med .nm, .mm-fr .n');
+  if (!el) return; const t = el.firstChild && el.firstChild.nodeType === 3 ? el.firstChild.textContent : el.textContent;
+  MMP.open(String(t).trim());
+});
+dash.draw('pl_search_list', (dl) => {
+  const m = MMP.all(); dl.replaceChildren(); if (!m) return;
+  Array.from(m.values()).sort((a, b) => a.player.localeCompare(b.player)).forEach((p) => { const o = document.createElement('option'); o.value = p.player; o.label = `${p.team} ${p.pos} · ${p.game}`; dl.appendChild(o); });
+});
+(() => {
+  document.querySelectorAll('.mm-pl-search').forEach((inp) => {
+    const go = (final) => { const m = MMP.all(); if (!m) return; const q = inp.value.trim(); if (!q) { dash.setParams({ pl_q: null }); return; }
+      if (m.has(q)) { MMP.open(q); return; } dash.setParams({ pl_q: q });
+      if (final) { const n = q.toLowerCase(); const hit = Array.from(m.keys()).filter((k) => k.toLowerCase().includes(n)); if (hit.length === 1) MMP.open(hit[0]); } };
+    inp.addEventListener('input', () => go(false)); inp.addEventListener('change', () => go(true)); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(true); });
+  });
+})();
+dash.draw('pl_team_sel', (sel) => {
+  const m = MMP.all(); sel.replaceChildren(); if (!m) return;
+  sel.appendChild(new Option('All teams', '')); Array.from(new Set(Array.from(m.values()).map((p) => p.team))).sort().forEach((t) => sel.appendChild(new Option(t, t)));
+  sel.value = dash.params().pl_team || ''; sel.onchange = () => dash.setParams({ pl_team: sel.value || null });
+});
+dash.draw('pl_pos_sel', (sel) => {
+  sel.replaceChildren(); [['', 'All positions'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']].forEach(([v, l]) => sel.appendChild(new Option(l, v)));
+  sel.value = dash.params().pl_pos || ''; sel.onchange = () => dash.setParams({ pl_pos: sel.value || null });
+});
+dash.draw('pl_list', (el) => {
+  const m = MMP.all(); el.replaceChildren(); if (!m) return; const p = dash.params(); const q = (p.pl_q || '').toLowerCase();
+  const list = Array.from(m.values()).filter((x) => (!p.pl_team || x.team === p.pl_team) && (!p.pl_pos || x.pos === p.pl_pos) && (!q || x.player.toLowerCase().includes(q)))
+    .sort((a, b) => (a.out - b.out) || a.player.localeCompare(b.player));
+  if (!list.length) { el.appendChild(MMP.h('p', 'mm-pl-empty', 'No players match.')); return; }
+  list.slice(0, 400).forEach((x) => {
+    const b = MMP.h('button', 'mm-pl-item pos-' + x.pos); b.type = 'button'; b.setAttribute('aria-current', String(p.pl === x.player));
+    b.append(MMP.h('span', 'n', x.player), MMP.h('span', 'p', x.pos), MMP.h('span', 'm', `${x.team} · ${x.game}${x.out ? ' · out' : ''}`));
+    b.onclick = () => MMP.open(x.player); el.appendChild(b);
+  });
+});
+dash.onData(() => {
+  const m = MMP.all(); const name = dash.params().pl; const has = !!(m && name && m.has(name));
+  document.querySelectorAll('.mm-pl-layout').forEach((l) => l.classList.toggle('has-player', has));
+});
+dash.draw('pl_profile', (el) => {
+  const { h, pc, f1, ord } = MMP; const m = MMP.all(); el.replaceChildren(); if (!m) return;
+  const name = dash.params().pl; const x = name && m.get(name);
+  if (!x) { el.appendChild(h('p', 'mm-pl-empty', 'Pick a player from the list, or search by name, to open his profile. You can also tap any player name elsewhere on the dashboard.')); return; }
+  const R = (MM.ok('pl_role') || []).find((r) => r.player === x.player);
+  const LOG = (MM.ok('pl_log') || []).filter((r) => r.player === x.player).sort((a, b) => a.week - b.week);
+  // --- header
+  const head = h('div', 'mm-pf-head pos-' + x.pos); head.style.setProperty('--tb', MMP.TB[x.team] || '#152140');
+  const back = h('button', 'mm-link mm-pf-back', '← All players'); back.type = 'button'; back.onclick = () => dash.setParams({ pl: null });
+  const nm = h('h2', 'mm-pf-name', x.player);
+  const sub = h('div', 'mm-pf-sub'); const chip = h('span', 'mm-team ' + x.team.toLowerCase(), x.team); sub.append(chip, h('span', 'pos', x.pos), h('span', '', `${x.game} · ${x.kickoff}`));
+  const stt = String(x.status || 'Healthy'); const sc = /out|ir/i.test(stt) || x.out ? 'o' : /quest|doubt/i.test(stt) ? 'q' : ''; sub.appendChild(h('span', 'mm-pf-status ' + sc, x.out && !/out|ir/i.test(stt) ? 'Not expected to play' : stt));
+  const roles = h('div', 'mm-pf-roles');
+  const role = (v, t) => { const s = h('span'); s.appendChild(h('b', '', v)); s.append(t); roles.appendChild(s); };
+  if (R) {
+    role(String(R.games), 'games');
+    if (R.snap_pct != null) role(pc(R.snap_pct), 'of snaps');
+    if (x.pos === 'QB') { const a = d3.mean(LOG, (r) => r.att) || 0, yd = d3.mean(LOG, (r) => r.pyd) || 0; role(f1(a), 'pass att per game'); role(String(Math.round(yd)), 'pass yds per game'); }
+    if (x.pos !== 'QB' && R.tgt_share != null) role(pc(R.tgt_share), `target share (${ord(R.tgt_rank)} on ${x.team})`);
+    if (x.pos !== 'QB') role(f1(R.tgt_pg), 'targets per game');
+    if (x.pos === 'RB' && R.car_share != null) { role(pc(R.car_share), `carry share (${ord(R.car_rank)} on ${x.team})`); role(f1(R.car_pg), 'carries per game'); }
+  }
+  head.append(back, nm, sub, roles); el.appendChild(head);
+  const grid = h('div', 'mm-pf-grid'); el.appendChild(grid);
+  // --- this week's props
+  const card = (title, note) => { const c = h('div', 'mm-card'); c.appendChild(h('h2', '', title)); if (note) c.appendChild(h('p', 'mm-note', note)); grid.appendChild(c); return c; };
+  const pc1 = card("This week's props", x.out ? 'He is not expected to play, so there are no projections.' : 'Our projection for every stat, judged at the sportsbook line where one is posted (gold) or just under his median otherwise. Tap a row to open it in the Prop explorer.');
+  if (!x.out) {
+    const lad = MM.ok('proj_ladders'); const board = MM.ok('book_board') || [], thu = MM.ok('thu_picks') || [];
+    const t = h('table', 'mm-table mm-pf-props'); const hr = h('tr'); ['Stat', 'Proj', 'Line', 'Over', 'Under'].forEach((c, i) => hr.appendChild(h('th', (i ? 'num' : '') + (i === 4 ? ' mm-hide-sm' : ''), c))); hr.appendChild(h('th', 'mm-hide-sm', 'Books'));
+    const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
+    x.rows.slice().sort((a, b) => MMP.ORDER.indexOf(a.stat) - MMP.ORDER.indexOf(b.stat)).forEach((r) => {
+      const L = MMP.lineFor(x.player, r.stat, r); if (!L) return; const at = lad && MMX.at(lad, r.k, L.line);
+      const tr = h('tr'); const sc = h('td', '', r.stat);
+      const bp = board.find((b) => b.player === x.player && String(b.stat).endsWith(' ' + r.stat) && b.blend_prob >= 0.55), tp = thu.find((b) => b.player === x.player && b.stat === r.stat);
+      if (bp) sc.appendChild(h('span', 'mm-pf-tag', `TOP PICK · ${bp.pick.toUpperCase()}`)); else if (tp) sc.appendChild(h('span', 'mm-pf-tag', `MR. MILK PICK · ${tp.pick.toUpperCase()}`));
+      tr.append(sc, h('td', 'num', f1(r.projection)), h('td', 'num' + (L.src === 'book' ? ' l' : ''), String(L.line)));
+      const o = at ? (at.edge ? (at.o ? 0.99 : 0.01) : at.o) : null;
+      tr.append(h('td', 'num' + (o != null && o >= 0.55 ? ' g' : ''), o == null ? '—' : pc(o)), h('td', 'num mm-hide-sm' + (o != null && 1 - o >= 0.55 ? ' g' : ''), o == null ? '—' : pc(1 - o)));
+      const b = L.b; const bk = b ? [['DK', b.dk_line], ['FD', b.fd_line], ['MGM', b.mgm_line], ['PP', b.pp]].filter((z) => z[1] != null).map((z) => `${z[0]} ${z[1]}`).join(' · ') : '';
+      tr.appendChild(h('td', 'mm-hide-sm mm-pf-books', bk || '—'));
+      tr.onclick = () => { dash.setParams({ ex_game: x.game, ex_player: x.player, ex_stat: r.stat, ex_line: L.line }); const tbn = document.getElementById('tab-explorer'); if (tbn) tbn.click(); };
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); pc1.appendChild(sw);
+  }
+  // --- matchup
+  const D = MM.ok('dvp'), T = MM.ok('dvp_team');
+  if (D && T && x.opp) {
+    const opp = x.opp === 'LAR' ? 'LA' : x.opp; const dr = D.find((r) => r.team === opp && r.pos === x.pos);
+    if (dr) {
+      const mc = card(`Matchup: ${x.opp} defense`, null); const box = h('div', 'mm-pf-match');
+      const big = h('div', 'big'); const rk = dr.fpts_rank; const v = h('b', MMD.tier(rk), ord(rk)); big.append(v, h('span', 'mm-note', `${rk <= 16 ? 'softest' : 'toughest'} vs ${x.pos}s: ${f1(dr.fpts)} fantasy pts allowed per game (${dr.fpts_vs_avg >= 0 ? '+' : '−'}${pc(Math.abs(dr.fpts_vs_avg))} vs average).`));
+      if (rk > 16) v.textContent = ord(33 - rk);
+      box.appendChild(big);
+      try {
+        const rep = MMSC.build(opp, D, T); const items = rep ? rep.items.filter((it) => !it.pos || it.pos === x.pos).slice(0, 3) : [];
+        if (items.length) { const ul = h('ul'); items.forEach((it) => { const li = h('li', it.cls); li.innerHTML = it.html; ul.appendChild(li); }); box.appendChild(ul); }
+      } catch (e) { /* scouting report is optional */ }
+      const lk = h('button', 'mm-link', `Open the ${x.opp} defense profile →`); lk.type = 'button'; lk.onclick = () => { dash.setParams({ dvp_team: opp, dvp_pos: x.pos }); const tb = document.getElementById('tab-dvp'); if (tb) tb.click(); };
+      box.appendChild(lk); mc.appendChild(box);
+    }
+  }
+  // --- 10K sim (when his game has been simulated)
+  const SM = (MM.ok('sim_median') || []).find((r) => r.player === x.player), SS = (MM.ok('sim_scorers') || []).find((r) => r.player === x.player);
+  if (SM || SS) {
+    const c = card('In the 10,000 sims', 'His median game across every simulated version of this matchup.'); const g = h('div', 'mm-pf-sim');
+    const add = (l, v, s) => { const d = h('div'); d.append(h('span', 'l', l), h('span', 'v', v), h('span', 's', s || '')); g.appendChild(d); };
+    if (SM) {
+      const M = (k) => SM[k + '_med'] != null ? String(Math.round(SM[k + '_med'])) : null, A = (k) => SM[k + '_avg'] != null ? `avg ${f1(SM[k + '_avg'])}` : '';
+      if (x.pos === 'QB') { add('Cmp/Att', `${M('cmp')}/${M('att')}`); add('Pass yds', M('pyd'), A('pyd')); add('Pass TD', M('ptd'), A('ptd')); add('Rush yds', M('ryd'), A('ryd')); }
+      else if (x.pos === 'RB') { add('Carries', M('car'), A('car')); add('Rush yds', M('ryd'), A('ryd')); add('Catches', M('rec'), A('rec')); add('Rec yds', M('yd'), A('yd')); }
+      else { add('Targets', M('tgt'), A('tgt')); add('Catches', M('rec'), A('rec')); add('Rec yds', M('yd'), A('yd')); if (SM.p100 != null) add('100+ yds', pc(SM.p100), 'of sims'); }
+    }
+    if (SS) { add('Anytime TD', pc(SS.anytime_td), 'of sims'); add('First TD', pc(SS.first_td), 'of sims'); }
+    c.appendChild(g);
+  }
+  // --- season game log
+  const lc = h('div', 'mm-card'); el.appendChild(lc); lc.appendChild(h('h2', '', 'Season game log'));
+  if (!LOG.length) lc.appendChild(h('p', 'mm-note', 'No games played this season.'));
+  else {
+    const COLS = x.pos === 'QB' ? [['Cmp/Att', null], ['Pass yds', 'Pass Yds'], ['TD', 'Pass TD'], ['INT', null], ['Rush yds', 'Rush Yds']]
+      : x.pos === 'RB' ? [['Car', 'Rush Att'], ['Rush yds', 'Rush Yds'], ['TD', null], ['Tgt', 'Targets'], ['Rec', 'Receptions'], ['Rec yds', 'Rec Yds']]
+      : [['Tgt', 'Targets'], ['Rec', 'Receptions'], ['Rec yds', 'Rec Yds'], ['TD', null], ['Car', 'Rush Att']];
+    const lines = Object.fromEntries(COLS.filter((c) => c[1]).map(([, s]) => { const r = x.rows.find((q) => q.stat === s); const L = r && !x.out ? MMP.lineFor(x.player, s, r) : null; return [s, L ? L.line : null]; }));
+    lc.appendChild(h('p', 'mm-note', `Every game this season. ${x.out ? '' : "Green beat this week's line for that stat (shown in the header), red fell short."}`));
+    const t = h('table', 'mm-table mm-pf-log'); const hr = h('tr'); hr.append(h('th', '', 'Wk'), h('th', '', 'Opp'), h('th', 'num mm-hide-sm', 'Snaps'));
+    COLS.forEach(([l, s]) => hr.appendChild(h('th', 'num' + (s && lines[s] != null ? ' k' : ''), s && lines[s] != null ? `${l} (${lines[s]})` : l)));
+    const thd = h('thead'); thd.appendChild(hr); t.appendChild(thd); const tb = h('tbody');
+    const val = (r, l, s) => l === 'Cmp/Att' ? `${r.cmp}/${r.att}` : l === 'INT' ? r.int : l === 'TD' ? (x.pos === 'QB' ? r.ptd : x.pos === 'RB' ? r.rtd + r.td : r.td) : r[MMP.LOGK[s]];
+    LOG.forEach((r) => { const tr = h('tr'); tr.append(h('td', '', String(r.week)), h('td', '', r.opp), h('td', 'num mm-hide-sm', r.snap_pct == null ? '—' : pc(r.snap_pct)));
+      COLS.forEach(([l, s]) => { const v = val(r, l, s); const ln = s ? lines[s] : null; tr.appendChild(h('td', 'num' + (ln != null && typeof v === 'number' ? (v > ln ? ' o' : v < ln ? ' u' : '') : ''), String(v))); });
+      tb.appendChild(tr); });
+    t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); lc.appendChild(sw);
+    // trend chart for his main stat
+    const st = MMP.MAIN[x.pos], k = MMP.LOGK[st], ln = lines[st];
+    const ch = h('div', 'mm-chart mm-chart-xs'); lc.appendChild(ch);
+    requestAnimationFrame(() => {
+      const W = Math.max(280, ch.clientWidth || 600), H = 170, mg = { t: 22, r: 10, b: 24, l: 34 };
+      const d = LOG.map((r) => ({ w: r.week, v: r[k] })); const top = Math.max(d3.max(d, (z) => z.v) || 1, ln || 0) * 1.18;
+      const xs = d3.scaleBand(d.map((z) => z.w), [mg.l, W - mg.r]).padding(0.3), ys = d3.scaleLinear([0, top], [H - mg.b, mg.t]);
+      const svg = d3.select(ch).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', `${x.player} ${st} by week`);
+      svg.append('g').selectAll('line').data(ys.ticks(3)).join('line').attr('x1', mg.l).attr('x2', W - mg.r).attr('y1', ys).attr('y2', ys).attr('stroke', 'var(--cds-chart-grid)');
+      svg.append('g').selectAll('text').data(ys.ticks(3)).join('text').attr('x', mg.l - 6).attr('y', ys).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(d3.format(','));
+      const bw = Math.min(xs.bandwidth(), 44), off = (xs.bandwidth() - bw) / 2;
+      svg.append('g').selectAll('rect').data(d).join('rect').attr('x', (z) => xs(z.w) + off).attr('width', bw).attr('y', (z) => ys(z.v)).attr('height', (z) => ys(0) - ys(z.v)).attr('rx', 4)
+        .attr('fill', (z) => ln == null ? 'var(--mm-cyan)' : z.v > ln ? 'var(--color-ok)' : z.v < ln ? '#B91C1C' : 'var(--cds-chart-muted)');
+      svg.append('g').selectAll('text.v').data(d).join('text').attr('x', (z) => xs(z.w) + xs.bandwidth() / 2).attr('y', (z) => ys(z.v) - 5).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg)').attr('font-size', 12).attr('font-weight', 700).text((z) => z.v);
+      svg.append('g').selectAll('text.w').data(d).join('text').attr('x', (z) => xs(z.w) + xs.bandwidth() / 2).attr('y', H - 7).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text((z) => `Wk ${z.w}`);
+      if (ln != null) { svg.append('line').attr('x1', mg.l).attr('x2', W - mg.r).attr('y1', ys(ln)).attr('y2', ys(ln)).attr('stroke', 'var(--mm-gb)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+        svg.append('text').attr('x', W - mg.r).attr('y', 13).attr('text-anchor', 'end').attr('fill', 'var(--mm-gb)').attr('font-size', 12).attr('font-weight', 700).text(`${st}: line ${ln} · avg ${f1(d3.mean(d, (z) => z.v))}`); }
+    });
+  }
+});
+dash.draw('pl_probe', () => {});   // keeps the profile's datasets loaded while the Players tab is open
 </script>
 
 </div>
