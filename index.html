@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027200350', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027202314', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -50,6 +50,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
   Promise.all(IDS.map((id) => fetch(`data/${id}.json?v=${BUILD}`).then((r) => r.json()).then((d) => { DATA[id] = d; }).catch(() => { ERR[id] = 1; })))
     .then(() => { document.documentElement.classList.add('mm-ready'); render(); });
   window.addEventListener('DOMContentLoaded', render);
+  window.addEventListener('load', () => setTimeout(render, 250));   // once fonts and layout have settled
   let rt = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 200); });
   // auto-update: when the app is opened or brought back, check for a newer build and reload into it
   const check = () => fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json()).then((v) => { if (v.build && v.build !== BUILD) location.reload(); }).catch(() => {});
@@ -375,6 +376,26 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
   .mm-lp-grid[data-show="CAR"] .mm-lp.gb, .mm-lp-grid[data-show="GB"] .mm-lp.car { display: none; }
 }
 
+/* compact game summary */
+.mm-compact { gap: 8px; padding: 14px 16px; }
+.mm-compact h2 { font-size: 26px; }
+.mm-compact .mm-wp-bar { min-height: 10px; }
+.mm-compact .mm-wp-lab { font-size: 14px; }
+.mm-compact .mm-wp-lab b { font-size: 20px; }
+.mm-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mm-mini > div { background: var(--mm-panel); border: 1px solid var(--mm-line); border-left: 3px solid var(--mm-gold); border-radius: 8px; padding: 6px 10px; display: grid; gap: 0; min-width: 0; }
+.mm-mini .l { color: var(--mm-cyan); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-mini .v { font-family: var(--mm-display); font-size: 28px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.mm-mini .s { color: var(--mm-mut); font-size: 12px; }
+.mm-chart-xs { min-height: 150px; }
+.mm-xs { font-size: 13px; }
+@media (max-width: 480px) { .mm-mini .v { font-size: 22px; } .mm-mini > div { padding: 5px 8px; } }
+.mm-scroll-sm { max-height: 21rem; }
+.mm-med-team { justify-self: start; }
+.mm-find-col { grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+.mm-find-col h3 { grid-column: 1 / -1; }
+.mm-find { grid-template-columns: 1fr; }
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -452,44 +473,42 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <p class="mm-note">One of 500 full games from the same engine as the 10,000 sims, played back snap by snap. Watch Mr. Milk's picks cash (or not) as it goes. Sim it again for a different game; every one is a real outcome the model can produce.</p>
       <div class="mm-live" data-draw="live_player" data-source="sim_live"></div>
     </div>
-    <div class="mm-card" id="game-card">
+    <div class="mm-grid mm-sumgrid">
+    <div class="mm-card mm-compact" id="game-card">
       <h2>Panthers @ Packers</h2>
-      <p class="mm-note"><span data-draw="kickoff" data-source="sim_games" data-field="kickoff" data-row="0">—</span> · <span data-draw="sims_n" data-source="sim_games" data-field="sims" data-row="0">—</span> simulated games, play by play. Featured game in the video: <span data-draw="featured" data-source="sim_games" data-field="featured" data-row="0">—</span>.</p>
+      <p class="mm-note"><span data-draw="kickoff" data-source="sim_games" data-field="kickoff" data-row="0">—</span> · <span data-draw="sims_n" data-source="sim_games" data-field="sims" data-row="0">—</span> sims. Video's featured game: <span data-draw="featured" data-source="sim_games" data-field="featured" data-row="0">—</span>.</p>
       <div class="mm-wp">
         <div class="mm-wp-bar" data-draw="wp_bar" data-source="sim_games"></div>
-        <div class="mm-wp-lab"><span>Panthers <b data-draw="car_win" data-source="sim_games" data-field="away_win" data-row="0">—</b></span><span>Packers <b data-draw="gb_win" data-source="sim_games" data-field="home_win" data-row="0">—</b></span></div>
+        <div class="mm-wp-lab"><span>Panthers win <b data-draw="car_win" data-source="sim_games" data-field="away_win" data-row="0">—</b></span><span>Packers win <b data-draw="gb_win" data-source="sim_games" data-field="home_win" data-row="0">—</b></span></div>
       </div>
-      <div class="mm-tiles">
-        <div class="mm-tile"><span class="mm-lab">Average score</span><span class="mm-big"><span data-draw="gb_avg" data-source="sim_games" data-field="home_avg" data-row="0">—</span>–<span data-draw="car_avg" data-source="sim_games" data-field="away_avg" data-row="0">—</span></span><span class="mm-sub">Packers–Panthers</span></div>
-        <div class="mm-tile"><span class="mm-lab">Packers <span data-draw="spread_line" data-source="sim_games" data-field="spread_line" data-row="0">—</span> covers</span><span class="mm-big" data-draw="cover" data-source="sim_games" data-field="home_cover" data-row="0">—</span><span class="mm-sub">of sims</span></div>
-        <div class="mm-tile"><span class="mm-lab">Over <span data-draw="total_line" data-source="sim_games" data-field="total_line" data-row="0">—</span></span><span class="mm-big" data-draw="over" data-source="sim_games" data-field="over" data-row="0">—</span><span class="mm-sub">average total <span data-draw="total_avg" data-source="sim_games" data-field="total_avg" data-row="0">—</span></span></div>
+      <div class="mm-mini">
+        <div><span class="l">Avg score</span><span class="v"><span data-draw="gb_avg" data-source="sim_games" data-field="home_avg" data-row="0">—</span>–<span data-draw="car_avg" data-source="sim_games" data-field="away_avg" data-row="0">—</span></span><span class="s">GB–CAR</span></div>
+        <div><span class="l"><span data-draw="spread_line" data-source="sim_games" data-field="spread_line" data-row="0">—</span> covers</span><span class="v" data-draw="cover" data-source="sim_games" data-field="home_cover" data-row="0">—</span><span class="s">of sims</span></div>
+        <div><span class="l">Over <span data-draw="total_line" data-source="sim_games" data-field="total_line" data-row="0">—</span></span><span class="v" data-draw="over" data-source="sim_games" data-field="over" data-row="0">—</span><span class="s">avg total <span data-draw="total_avg" data-source="sim_games" data-field="total_avg" data-row="0">—</span></span></div>
+      </div>
+      <div class="mm-chart mm-chart-xs" id="margin-chart" data-draw="margin_chart" data-source="sim_margin" data-h="150"></div>
+      <p class="mm-note mm-xs">How all 10,000 games finished: Packers' margin. Gold = Packers win, blue = Panthers win, dashed line = GB −3.5.</p>
+    </div>
+    <div class="mm-card mm-compact" id="scorers-card">
+      <h2>Who scores</h2>
+      <p class="mm-note">Share of the 10,000 sims where each player scored. First TD = the game's first touchdown.</p>
+      <div class="mm-scroll mm-scroll-sm">
+        <table class="mm-table" id="scorers-table" data-source="sim_scorers" data-row-key="player">
+          <thead><tr><th data-field="player">Player</th><th data-field="team">Team</th><th data-field="anytime_td">Anytime TD</th><th data-field="first_td" class="num">First TD</th><th data-field="two_plus" class="num mm-hide-sm">2+ TDs</th></tr></thead>
+          <tbody data-draw="scorer_rows"></tbody>
+        </table>
       </div>
     </div>
-    <div class="mm-grid">
-      <div class="mm-card" id="margin-card">
-        <h2>How the 10,000 games finished</h2>
-        <p class="mm-note">Packers' final margin in each sim. Gold bars are Packers wins, blue are Panthers wins. The dashed line is the Packers −3.5 spread.</p>
-        <div class="mm-chart" id="margin-chart" data-draw="margin_chart" data-source="sim_margin"></div>
-      </div>
-      <div class="mm-card" id="scorers-card">
-        <h2>Who scores</h2>
-        <p class="mm-note">Share of the 10,000 sims where each player scored. First TD = scored the game's first touchdown.</p>
-        <div class="mm-scroll">
-          <table class="mm-table" id="scorers-table" data-source="sim_scorers" data-row-key="player">
-            <thead><tr><th data-field="player">Player</th><th data-field="team">Team</th><th data-field="anytime_td">Anytime TD</th><th data-field="first_td" class="num">First TD</th><th data-field="two_plus" class="num mm-hide-sm">2+ TDs</th></tr></thead>
-            <tbody data-draw="scorer_rows"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
     <div class="mm-card" id="medians-card">
       <h2>The median game</h2>
       <p class="mm-note">Each key player's middle-of-the-road stat line across 10,000 sims: half the sims land above it, half below. The small number is the average. Percentages are how often it happened.</p>
+      <div class="mm-seg mm-med-team" role="group" aria-label="Team"><button type="button" class="mm-btn" data-t="" aria-pressed="true">Both</button><button type="button" class="mm-btn" data-t="CAR" aria-pressed="false">Panthers</button><button type="button" class="mm-btn" data-t="GB" aria-pressed="false">Packers</button></div>
       <div class="mm-scroll mm-med-wrap" data-draw="med_tables" data-source="sim_median"></div>
     </div>
     <div class="mm-card" id="findings-card">
       <h2>What keeps showing up</h2>
-      <p class="mm-note">The patterns that repeat across all 10,000 simulated games. The big number is how often it happened.</p>
+      <p class="mm-note">Passing-game patterns that repeat across all 10,000 simulated games. The big number is how often it happened.</p>
       <div class="mm-find" data-draw="find_rows" data-source="sim_findings"></div>
     </div>
     </div>
@@ -776,17 +795,17 @@ dash.draw('wp_bar', (el) => {
 });
 dash.draw('margin_chart', (el) => {
   const d = MM.ok('sim_margin'); el.replaceChildren(); if (!d) return;
-  const W = Math.max(280, el.clientWidth), H = 260, m = { t: 12, r: 10, b: 40, l: 40 };
+  const W = Math.max(280, el.clientWidth), H = +el.dataset.h || 260, m = H < 200 ? { t: 14, r: 8, b: 22, l: 34 } : { t: 12, r: 10, b: 40, l: 40 };
   const x = d3.scaleBand(d.map((r) => r.margin), [m.l, W - m.r]).padding(0.15);
   const y = d3.scaleLinear([0, d3.max(d, (r) => r.share) * 1.1], [H - m.b, m.t]);
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Packers margin across 10,000 sims');
-  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
-  svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.l - 6).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(d3.format('.0%'));
+  svg.append('g').selectAll('line').data(y.ticks(H < 200 ? 3 : 4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+  svg.append('g').selectAll('text').data(y.ticks(H < 200 ? 3 : 4)).join('text').attr('x', m.l - 6).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(d3.format('.0%'));
   svg.append('g').selectAll('rect').data(d).join('rect').attr('x', (r) => x(r.margin)).attr('width', x.bandwidth()).attr('y', (r) => y(r.share)).attr('height', (r) => y(0) - y(r.share)).attr('rx', 2)
     .attr('fill', (r) => r.margin > 0 ? 'var(--mm-gb)' : r.margin < 0 ? 'var(--mm-car)' : 'var(--cds-chart-muted)');
   const ticks = d.map((r) => r.margin).filter((v) => v % 7 === 0);
-  svg.append('g').selectAll('text').data(ticks).join('text').attr('x', (v) => x(v) + x.bandwidth() / 2).attr('y', H - m.b + 16).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text((v) => v > 0 ? '+' + v : String(v));
-  svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 4).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text('Packers margin (points)');
+  svg.append('g').selectAll('text').data(ticks).join('text').attr('x', (v) => x(v) + x.bandwidth() / 2).attr('y', H - m.b + 15).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text((v) => v > 0 ? '+' + v : String(v));
+  if (H >= 200) svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 4).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text('Packers margin (points)');
   const sx = (x(3) + x(4) + x.bandwidth()) / 2;
   svg.append('line').attr('x1', sx).attr('x2', sx).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
   svg.append('text').attr('x', sx + 4).attr('y', m.t + 10).attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text('GB −3.5');
@@ -977,7 +996,7 @@ dash.draw('last5_chart', (el) => {
   const top = Math.max(d3.max(d, (r) => r.value), s.line) * 1.15 || 1;
   const x = d3.scaleBand(d.map((r) => r.n), [m.l, W - m.r]).padding(0.28); const y = d3.scaleLinear([0, top], [H - m.b, m.t]);
   const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', `${s.player} last ${d.length} games, ${s.stat}`);
-  const yt = y.ticks(4);
+  const yt = y.ticks(H < 200 ? 3 : 4);
   svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
   svg.append('g').selectAll('text').data(yt).join('text').attr('x', m.l - 6).attr('y', y).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(d3.format(','));
   const bw = Math.min(x.bandwidth(), 56), off = (x.bandwidth() - bw) / 2;
@@ -1680,7 +1699,7 @@ window.MMV = (() => {
     'Pass catchers': [['tgt', 'Tgt'], ['rec', 'Rec'], ['yd', 'Rec yds'], ['long20', 'Long 20+'], ['p100', '100+ yds'], ['anytd', 'TD']],
   };
   dash.draw('med_tables', (el) => {
-    const d = MM.ok('sim_median'); el.replaceChildren(); if (!d) return;
+    const all = MM.ok('sim_median'); el.replaceChildren(); if (!all) return; const tf = dash.params().med_team; const d = tf ? all.filter((r) => r.team === tf) : all;
     Object.keys(COLS).forEach((g) => {
       const rows = d.filter((r) => r.group === g); if (!rows.length) return;
       const t = h('table', 'mm-med'); const hr = h('tr'); hr.appendChild(h('th', '', g)); COLS[g].forEach(([, l]) => hr.appendChild(h('th', '', l)));
@@ -1711,6 +1730,12 @@ window.MMV = (() => {
     });
   });
 })();
+</script>
+<script>
+document.querySelectorAll('.mm-med-team .mm-btn').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.mm-med-team .mm-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  dash.setParams({ med_team: b.dataset.t || null });
+}));
 </script>
 
 </div>
