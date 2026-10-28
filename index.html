@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027182422', IDS = ["book_board", "dvp", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027182944', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -236,6 +236,17 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-dpos dt { color: var(--mm-mut); font-size: 15px; } .mm-dpos dd { margin: 0; text-align: right; font-weight: 700; }
 .mm-dpos .mm-rk { font-size: 16px; min-width: 1.9em; }
 .mm-table tbody tr.mm-hl td { background: rgba(255,190,46,.14) !important; box-shadow: inset 0 1px 0 rgba(255,190,46,.5), inset 0 -1px 0 rgba(255,190,46,.5); }
+
+.mm-scout { display: grid; gap: 10px; background: linear-gradient(90deg, rgba(255,190,46,.10), rgba(255,190,46,0) 70%); border-left: 3px solid var(--mm-gold); border-radius: 8px; padding: 12px 16px; }
+.mm-scout h3 { margin: 0; font-family: var(--mm-display); font-weight: 400; font-size: 24px; letter-spacing: .03em; color: var(--mm-gold); }
+.mm-scout .mm-tag { font-family: var(--mm-display); font-size: 21px; letter-spacing: .02em; color: var(--mm-txt); margin: 0; }
+.mm-scout ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.mm-scout li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: 17px; line-height: 1.35; max-width: 80ch; }
+.mm-scout li::before { content: ''; width: 9px; height: 9px; border-radius: 2px; margin-top: 7px; background: var(--mm-dot, var(--mm-mut)); }
+.mm-scout li.weak { --mm-dot: var(--mm-hit); } .mm-scout li.strong { --mm-dot: var(--mm-miss); } .mm-scout li.wk8 { --mm-dot: var(--mm-gold); }
+.mm-scout li b { color: var(--mm-txt); font-weight: 700; }
+.mm-scout li.wk8 b { color: var(--mm-gold); }
+.mm-scout .mm-key { font-size: 13px; color: var(--mm-mut); }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
@@ -458,6 +469,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     <div class="mm-card mm-dteam-card" id="dvp-team-card" hidden>
       <div class="mm-dteam-head" data-draw="dvp_team_head" data-source="dvp"></div>
       <p class="mm-note">Everything this defense has allowed per game, Weeks 1–7, to each position. The number in the box is its league rank: 1 allows the most (softest), 32 the least (toughest). For interceptions, 1 means it forces the fewest.</p>
+      <div class="mm-scout" data-draw="dvp_scout" data-source="dvp_team"></div>
       <div class="mm-dteam" data-draw="dvp_team_grid" data-source="dvp"></div>
     </div>
     <div class="mm-card" id="dvp-matchups-card">
@@ -1056,6 +1068,102 @@ dash.draw('dvp_team_grid', (el) => {
     });
     box.append(h, fp, vs, dl); el.appendChild(box);
   });
+});
+/* scouting report: only what stands out for the picked defense */
+window.MMSC = (() => {
+  const ord = (n) => { const v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); };
+  const most = (rk) => (rk === 1 ? 'the most' : `the ${ord(rk)}-most`);
+  const nth = (rk, w) => (rk === 1 ? w : `${ord(rk)}-${w}`);
+  const least = (rk) => (rk === 32 ? 'the fewest' : `the ${ord(33 - rk)}-fewest`);
+  const P = { QB: 'QBs', RB: 'RBs', WR: 'WRs', TE: 'TEs' };
+  const NOUN = { pass_yds: 'passing yards', pass_td: 'passing TDs', completions: 'completions', pass_att: 'pass attempts', rush_yds: 'rushing yards', rush_att: 'carries', rush_td: 'rushing TDs', rec: 'catches', rec_yds: 'receiving yards', targets: 'targets', rec_td: 'receiving TDs' };
+  const f1 = d3.format('.1f'), f2 = d3.format('.2f'), pc = d3.format('.0%');
+  const b = (t) => `<b>${t}</b>`;
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function build(team, D, T) {
+    const tm = MMD.tm, rows = Object.fromEntries(D.filter((r) => r.team === team).map((r) => [r.pos, r]));
+    const t = T.find((r) => r.team === team); if (!rows.QB || !t) return null;
+    const out = []; // {score, cls, html, pos}
+    // 1. fantasy points by position: only the extremes
+    ['QB', 'RB', 'WR', 'TE'].forEach((p) => {
+      const r = rows[p], rk = r.fpts_rank, v = r.fpts_vs_avg;
+      if (rk <= 6) out.push({ score: 20 - rk, cls: 'weak', pos: p, fp: 1, html: `${b('Soft vs ' + P[p])}: allows ${f1(r.fpts)} fantasy pts per game to ${MMD.NAME[p]}, ${most(rk)} in the league (${v >= 0 ? '+' : '−'}${pc(Math.abs(v))} vs average).` });
+      else if (rk >= 27) out.push({ score: rk - 13, cls: 'strong', pos: p, fp: 1, html: `${b('Tough vs ' + P[p])}: holds ${MMD.NAME[p]} to ${f1(r.fpts)} fantasy pts per game, ${least(rk)} in the league (−${pc(Math.abs(v))} vs average).` });
+    });
+    ['weak', 'strong'].forEach((cls) => {
+      const g = out.filter((x) => x.fp && x.cls === cls); if (g.length < 3) return;
+      g.forEach((x) => out.splice(out.indexOf(x), 1));
+      const names = g.map((x) => P[x.pos]); const list = names.length === 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+      const n = ['', '', 'both', 'all three', 'all four'][g.length];
+      out.push({ score: 30, cls, html: `${b((cls === 'weak' ? 'Soft vs ' : 'Tough vs ') + list)}: ${cls === 'weak' ? 'among the 6 most generous defenses in fantasy points' : 'among the 6 stingiest defenses in fantasy points'} vs ${n} (${g.map((x) => `${P[x.pos]} ${f1(rows[x.pos].fpts)}`).join(', ')} per game).` });
+    });
+    // 2. one standout stat per position (rank top/bottom 3), skipping fantasy points
+    ['QB', 'RB', 'WR', 'TE'].forEach((p) => {
+      const r = rows[p]; let best = null;
+      MMD.COLS[p].forEach(([k]) => {
+        if (k === 'fpts' || k === 'pass_att' || k === 'rush_att' || k === 'completions' || k === 'targets') return; const rk = r[k + '_rank']; const ext = Math.min(rk, 33 - rk);
+        if (ext <= 3 && (!best || ext < best.ext)) best = { k, rk, ext };
+      });
+      if (!best) return;
+      const { k, rk } = best, val = r[k], fv = /_td$|^ints$/.test(k) ? f2(val) : f1(val);
+      let html, cls;
+      if (k === 'passer_rating') { cls = rk <= 3 ? 'weak' : 'strong'; html = rk <= 3 ? `QBs post a ${b(f1(val) + ' passer rating')} against them, the ${nth(rk, 'highest')} in the NFL.` : `QBs post just a ${b(f1(val) + ' passer rating')} against them, the ${nth(33 - rk, 'lowest')} in the NFL.`; }
+      else if (k === 'ints') { cls = rk >= 30 ? 'strong' : 'weak'; html = rk >= 30 ? `${b('Ball hawks')}: force ${fv} interceptions per game, ${most(33 - rk)} in the league.` : `${b('Rarely take the ball away')}: ${fv} interceptions per game, ${least(33 - rk).replace('the ', '')} forced.`; }
+      else { cls = rk <= 3 ? 'weak' : 'strong'; html = rk <= 3 ? `Gives up ${most(rk)} ${NOUN[k]} to ${P[p]}: ${b(fv + ' per game')}.` : `Allows ${least(rk)} ${NOUN[k]} to ${P[p]}: ${b(fv + ' per game')}.`; }
+      out.push({ score: 12 - best.ext * 2, cls, pos: p, html });
+    });
+    // 3. team-wide efficiency and pass rush (rank 1 = worst defense)
+    const adv = [
+      ['pass_epa', (rk, x) => rk <= 3 ? `${b('Easy to throw on')}: the ${nth(rk, 'worst')} pass defense by EPA per dropback (+${f2(x)} points per play).` : `${b('Hard to throw on')}: the ${nth(33 - rk, 'best')} pass defense by EPA per dropback (${f2(x)} points per play).`],
+      ['rush_epa', (rk, x) => rk <= 3 ? `${b('Easy to run on')}: the ${nth(rk, 'worst')} run defense by EPA per carry.` : `${b('Hard to run on')}: the ${nth(33 - rk, 'best')} run defense by EPA per carry.`],
+      ['sack_rate', (rk, x) => rk <= 3 ? `${b('Little pass rush')}: sacks the QB on only ${pc(x)} of dropbacks, the ${nth(rk, 'lowest')} rate. QBs get time.` : `${b('Heavy pass rush')}: sacks the QB on ${pc(x)} of dropbacks, the ${nth(33 - rk, 'highest')} rate.`],
+      ['exp_pass_g', (rk, x) => rk <= 3 ? `${b('Gives up big plays')}: ${f1(x)} completions of 20+ yards per game, ${most(rk)}.` : `${b('Limits big plays')}: just ${f1(x)} completions of 20+ yards per game, ${least(rk)}.`],
+      ['exp_rush_g', (rk, x) => rk <= 3 ? `${b('Leaks long runs')}: ${f1(x)} runs of 10+ yards per game, ${most(rk)}.` : `${b('Stops long runs')}: ${f1(x)} runs of 10+ yards per game, ${least(rk)}.`],
+    ];
+    adv.forEach(([k, fn]) => { const rk = t[k + '_rank']; const ext = Math.min(rk, 33 - rk); if (ext <= 3) out.push({ score: 13 - ext * 2, cls: rk <= 3 ? 'weak' : 'strong', html: fn(rk, t[k]) }); });
+    // 4. trend: last 3 games vs season, fantasy points by position
+    let trend = null;
+    ['QB', 'RB', 'WR', 'TE'].forEach((p) => {
+      const r = rows[p]; const d = r.l3_fpts - r.fpts; if (Math.abs(d) < 5 || Math.abs(d) / r.fpts < 0.25) return;
+      if (!trend || Math.abs(d) > Math.abs(trend.d)) trend = { p, d, r };
+    });
+    if (trend) { const { p, d, r } = trend, w = r.l3_weeks;
+      out.push({ score: 9, cls: d > 0 ? 'weak' : 'strong', html: `${b(d > 0 ? 'Trending worse vs ' + P[p] : 'Trending better vs ' + P[p])}: ${f1(r.l3_fpts)} fantasy pts per game over Weeks ${w[0]}–${w[w.length - 1]}, vs ${f1(r.fpts)} for the season.` }); }
+    // keep the strongest few, at most two lines per position
+    out.sort((a, c) => c.score - a.score);
+    const per = {}, keep = [];
+    out.forEach((x) => { if (keep.length >= 5) return; if (x.pos) { per[x.pos] = (per[x.pos] || 0) + 1; if (per[x.pos] > 2) return; } keep.push(x); });
+    // headline: pass funnel / run funnel / soft or tough overall
+    const passRk = (rows.QB.fpts_rank + rows.WR.fpts_rank + rows.TE.fpts_rank) / 3, runRk = rows.RB.fpts_rank, all = (passRk * 3 + runRk) / 4;
+    let tag = null;
+    if (runRk - passRk >= 12) tag = 'Pass funnel: stout up front, beatable through the air.';
+    else if (passRk - runRk >= 12) tag = 'Run funnel: solid in coverage, gives up yards on the ground.';
+    else if (all <= 9) tag = 'Soft across the board: a matchup to attack at every position.';
+    else if (all >= 24) tag = 'Tough across the board: hard to find a soft spot.';
+    // week 8 angle
+    let wk = null; const o = rows.QB.wk8_offense;
+    if (o) {
+      const order = ['QB', 'RB', 'WR', 'TE'].map((p) => [p, rows[p].fpts_rank]).sort((a, c) => a[1] - c[1]);
+      const [sp, sr] = order[0], [hp, hr] = order[3];
+      const parts = [];
+      if (sr <= 10) parts.push(`target ${tm(o)}'s ${P[sp]} (this defense is the ${nth(sr, 'softest')} vs ${P[sp]})`);
+      if (hr >= 25) parts.push(`be careful with ${tm(o)}'s ${P[hp]} (the ${nth(33 - hr, 'toughest')} vs ${P[hp]})`);
+      wk = parts.length ? `${b('Week 8 vs ' + tm(o))}: ${parts.join('; ')}.` : `${b('Week 8 vs ' + tm(o))}: no position stands out as a clear edge either way.`;
+    } else wk = `${b('Week 8')}: on bye.`;
+    return { tag, items: keep, wk };
+  }
+  return { build, esc };
+})();
+dash.draw('dvp_scout', (el) => {
+  const s = MMD.state(); const T = MM.ok('dvp_team'); el.replaceChildren(); if (!s || !s.team || !T) return;
+  const rep = MMSC.build(s.team, s.D, T); if (!rep) return;
+  const h = document.createElement('h3'); h.textContent = `Scouting report: ${MMD.tm(s.team)} defense`; el.appendChild(h);
+  if (rep.tag) { const t = document.createElement('p'); t.className = 'mm-tag'; t.textContent = rep.tag; el.appendChild(t); }
+  const ul = document.createElement('ul');
+  [...rep.items, { cls: 'wk8', html: rep.wk }].forEach((x) => { const li = document.createElement('li'); li.className = x.cls; const sp = document.createElement('span'); sp.innerHTML = x.html; li.appendChild(sp); ul.appendChild(li); });
+  if (!rep.items.length) { const li = document.createElement('li'); li.textContent = 'Middle of the pack everywhere: no position or stat ranks in the top or bottom few.'; ul.prepend(li); }
+  el.appendChild(ul);
+  const k = document.createElement('p'); k.className = 'mm-key'; k.textContent = 'Green = good for offenses (soft spot), red = tough spot. Only top-3/bottom-3 stats and big swings make the list. EPA = expected points added: how much each play helps the offense score.'; el.appendChild(k);
 });
 </script>
 
