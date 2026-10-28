@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027224042', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027224220', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -806,7 +806,9 @@ window.MM = (() => {
   const text = (id, field, fmt, pick) => (el) => { const d = ok(id); const r = d && (pick ? pick(d) : d[0]); el.textContent = r && r[field] != null ? (fmt ? fmt(r[field]) : String(r[field])) : '—'; };
   const rows = (tbody, id, build, filter) => { const d = ok(id); tbody.replaceChildren(); if (!d) return; (filter ? d.filter(filter) : d).forEach((r) => { const tr = document.createElement('tr'); build(tr, r); tbody.appendChild(tr); }); };
   const fmtLine = (v) => String(v);
-  return { pct, pct1, ok, cell, team, pill, bar, text, rows, fmtLine };
+  // a chart drawn while its section is hidden has no width yet: wait until it's on screen, then draw at the real size
+  const later = (el, fn) => { if (el.clientWidth) return false; let n = 0; const tick = () => { if (!el.isConnected) return; if (el.clientWidth) fn(el); else if (n++ < 600) requestAnimationFrame(tick); }; requestAnimationFrame(tick); return true; };
+  return { pct, pct1, ok, cell, team, pill, bar, text, rows, fmtLine, later };
 })();
 
 /* ---------- tabs ---------- */
@@ -894,7 +896,7 @@ dash.draw('wp_bar', (el) => {
   const h = document.createElement('div'); h.style.cssText = `width:${r.home_win * 100}%;background:var(--mm-gb)`;
   el.append(a, t, h);
 });
-dash.draw('margin_chart', (el) => {
+dash.draw('margin_chart', function marginChart(el) { if (MM.later(el, marginChart)) return;
   const d = MM.ok('sim_margin'); el.replaceChildren(); if (!d) return;
   const W = Math.max(280, el.clientWidth), H = +el.dataset.h || 260, m = H < 200 ? { t: 14, r: 8, b: 22, l: 34 } : { t: 12, r: 10, b: 40, l: 40 };
   const x = d3.scaleBand(d.map((r) => r.margin), [m.l, W - m.r]).padding(0.15);
@@ -951,7 +953,7 @@ dash.draw('wk7_rows', (tb) => MM.rows(tb, 'wk7_picks', (tr, r) => {
   MM.cell(tr, r.player); MM.cell(tr, r.game, 'mm-hide-sm'); MM.cell(tr, r.prop); MM.cell(tr, r.pick); MM.cell(tr, MM.fmtLine(r.line), 'num'); MM.cell(tr, MM.pct(r.our_prob), 'num'); MM.cell(tr, String(r.actual), 'num');
   MM.pill(tr, r.result, r.result === 'Hit' ? 'hit' : 'miss');
 }));
-dash.draw('breakdown_chart', (el) => {
+dash.draw('breakdown_chart', function breakdownChart(el) { if (MM.later(el, breakdownChart)) return;
   const d = MM.ok('tp_breakdown'); el.replaceChildren(); if (!d) return;
   const BE = 0.545;
   const W = Math.max(280, el.clientWidth), rowH = 26, gapH = 22, groups = Array.from(new Set(d.map((r) => r.group)));
@@ -1089,7 +1091,7 @@ dash.draw('ex_sim', (el) => {
   const key = `${s.player}|${s.stat}`; const r = lad.find((x) => x.key === key && x.line === s.line);
   el.dataset.where = 'key=' + encodeURIComponent(key) + '&line=' + s.line; el.textContent = r ? MM.pct1(r.over) : '—';
 });
-dash.draw('last5_chart', (el) => {
+dash.draw('last5_chart', function last5Chart(el) { if (MM.later(el, last5Chart)) return;
   const s = MMX.state(); const L = MM.ok('proj_logs'); el.replaceChildren(); if (!s || !L) return;
   const d = L.filter((x) => x.k === s.k).sort((a, b) => a.n - b.n);
   if (!d.length) { const p = document.createElement('p'); p.className = 'mm-note'; p.textContent = 'No games played in this stat this season.'; el.appendChild(p); return; }
@@ -1112,7 +1114,7 @@ dash.draw('last5_chart', (el) => {
   svg.append('text').attr('x', W - m.r).attr('y', 14).attr('text-anchor', 'end').attr('fill', 'var(--color-fg)').attr('font-size', 12).attr('font-weight', 600).text(`${over} of ${d.length} over ${s.line}`);
   svg.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor', 'middle').attr('fill', 'var(--mm-gb)').attr('font-size', 14).attr('font-weight', 700).text(`Median ${d3.format(',.1~f')(d3.median(d, (r) => r.value))}  ·  Average ${d3.format('.1f')(d3.mean(d, (r) => r.value))}`);
 });
-dash.draw('ladder_chart', (el) => {
+dash.draw('ladder_chart', function ladderChart(el) { if (MM.later(el, ladderChart)) return;
   const s = MMX.state(); const lad = MM.ok('proj_ladders'); el.replaceChildren(); if (!s || !lad) return;
   const d = lad.filter((x) => x.k === s.k); if (!d.length) return;
   const W = Math.max(280, el.clientWidth), H = 260, m = { t: 14, r: 16, b: 40, l: 44 };
@@ -1239,7 +1241,7 @@ dash.draw('dvp_rows', (tb) => {
     tb.appendChild(tr);
   });
 });
-dash.draw('dvp_chart', (el) => {
+dash.draw('dvp_chart', function dvpChart(el) { if (MM.later(el, dvpChart)) return;
   const s = MMD.state(); el.replaceChildren(); if (!s) return;
   const d = s.byStat, k = s.sort, avg = d3.mean(d, (r) => r[k]);
   const W = Math.max(280, el.clientWidth), rowH = 19, m = { t: 22, r: 50, b: 8, l: 48 }, H = m.t + d.length * rowH + m.b;
@@ -1863,7 +1865,7 @@ document.querySelectorAll('.mm-med-team .mm-btn').forEach((b) => b.addEventListe
 (() => {
   const SH = { 'Rush Yds': 'Rush Yds', 'Rec Yds': 'Rec Yds', Receptions: 'Rec', 'Pass Att': 'Pass Att', 'Pass TD': 'Pass TD', 'Rush Att': 'Rush Att', 'Pass Yds': 'Pass Yds', Completions: 'Cmp' };
   const last = (n) => n.split(' ').slice(1).join(' ') || n;
-  dash.draw('cash_chart', (el) => {
+  dash.draw('cash_chart', function cashChart(el) { if (MM.later(el, cashChart)) return;
     const d0 = MM.ok('thu_picks'); el.replaceChildren(); if (!d0) return;
     const d = d0.filter((r) => r.sim_cash != null).slice().sort((a, b) => b.sim_cash - a.sim_cash);
     const W = Math.max(280, el.clientWidth), narrow = W < 520, rowH = narrow ? 34 : 30, m = { t: 6, r: 44, b: 22, l: narrow ? 128 : 220 }, H = m.t + d.length * rowH + m.b;
@@ -1882,7 +1884,7 @@ document.querySelectorAll('.mm-med-team .mm-btn').forEach((b) => b.addEventListe
     g.on('mousemove', (ev, r) => { tip.hidden = false; tip.replaceChildren(); const a = document.createElement('div'); a.className = 'k'; a.textContent = `${r.player} ${r.pick} ${r.line} ${r.stat}`; const b = document.createElement('div'); b.textContent = `Cashed in ${d3.format(',')(Math.round(r.sim_cash * 10000))} of 10,000 sims · model ${d3.format('.0%')(r.model_prob)}`; tip.append(a, b);
       const [px, py] = d3.pointer(ev, el); tip.style.left = Math.min(px + 10, el.clientWidth - tip.offsetWidth - 4) + 'px'; tip.style.top = Math.max(0, py - 44) + 'px'; }).on('mouseleave', () => { tip.hidden = true; });
   });
-  dash.draw('cashdist_chart', (el) => {
+  dash.draw('cashdist_chart', function cashDist(el) { if (MM.later(el, cashDist)) return;
     const d = MM.ok('sim_pickdist'); el.replaceChildren(); if (!d) return;
     const W = Math.max(240, el.clientWidth), H = +el.dataset.h || 190, m = { t: 18, r: 6, b: 22, l: 6 };
     const x = d3.scaleBand(d.map((r) => r.hits), [m.l, W - m.r]).padding(0.18), y = d3.scaleLinear([0, d3.max(d, (r) => r.share) * 1.12], [H - m.b, m.t]);
