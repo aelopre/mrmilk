@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028030900', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028031728', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -470,6 +470,10 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-cov .mix .bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--mm-mut) var(--w), transparent var(--w)); opacity: .55; }
 .mm-pf-cov .mix .r.me .n, .mm-pf-cov .mix .r.me .v { color: var(--mm-txt); font-weight: 700; } .mm-pf-cov .mix .r.me .bar { background: linear-gradient(90deg, var(--mm-gold) var(--w), transparent var(--w)); opacity: 1; }
 .mm-pf-cov .cv-src { margin: 0; color: var(--mm-mut); font-size: 12px; }
+.mm-pf-run .cv-eff { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mm-pf-run .mix .r { grid-template-columns: minmax(0, 8em) 1fr 6.2em; }
+.mm-pf-run .mix .v { white-space: nowrap; }
+.mm-pf-lanes td, .mm-pf-lanes th { padding: 6px 8px; }
 @media (max-width: 520px) { .mm-pf-cov .cv-s b { font-size: 26px; } .mm-pf-cov .cv-s span { font-size: 12px; } }
 .mm-pf-match { display: grid; gap: 8px; }
 .mm-pf-match .big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -817,7 +821,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
     </div>
-    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
   </section>
 </div>
 
@@ -2415,6 +2419,35 @@ dash.draw('pl_profile', (el) => {
       }
     }
   } catch (e) { /* coverage card is optional */ }
+  // --- run style vs this defense (RBs)
+  try {
+    const RS = x.pos === 'RB' && !x.out && !x.bye ? (MM.ok('pl_run') || []).find((r) => r.player === x.player) : null;
+    if (RS) {
+      const c = card(`Run style vs ${x.opp}`, null); c.classList.add('mm-pf-cov', 'mm-pf-run');
+      const pf = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(1)}%`;
+      const cl = (v) => (v >= 0.01 ? 'mm-tier-soft' : v <= -0.01 ? 'mm-tier-tough' : '');
+      const CN = [['iz', 'Inside zone'], ['oz', 'Outside zone'], ['duo', 'Man / duo'], ['power', 'Power'], ['counter', 'Counter']];
+      if (RS.iz_rate != null) {
+        c.appendChild(h('div', 'cv-h', 'What he runs (share of carries · success rate)'));
+        const mx = Math.max(...CN.map(([k]) => RS[k + '_rate'] || 0)) || 1; const bars = h('div', 'mix');
+        CN.forEach(([k, l]) => { const v = RS[k + '_rate'] || 0; const row = h('div', 'r' + (v === mx ? ' me' : '')); const bar = h('span', 'bar'); bar.style.setProperty('--w', (v / mx * 100).toFixed(0) + '%');
+          row.append(h('span', 'n', l), bar, h('span', 'v', `${pc(v)}${RS[k + '_succ'] != null && v > 0 ? ' · ' + pc(RS[k + '_succ']) : ''}`)); bars.appendChild(row); });
+        c.appendChild(bars);
+      }
+      c.appendChild(h('div', 'cv-h', `Where he runs vs where ${x.opp} is soft`));
+      const t = h('table', 'mm-table mm-pf-lanes'); const hr = h('tr'); hr.append(h('th', '', 'Lane'), h('th', 'num', 'His runs'), h('th', 'num', `${x.opp} allows`), h('th', 'num', 'League'));
+      const thd = h('thead'); thd.appendChild(hr); t.appendChild(thd); const tb = h('tbody');
+      [['in', 'Inside'], ['tackle', 'Off tackle'], ['out', 'Outside']].forEach(([k, l]) => {
+        const tr = h('tr'); const d = RS[`opp_${k}_ypc`] - RS[`lg_${k}_ypc`];
+        tr.append(h('td', '', l), h('td', 'num', `${pc(RS['mix_' + k])}`), h('td', 'num ' + (d >= 0.3 ? 'mm-tier-soft' : d <= -0.3 ? 'mm-tier-tough' : ''), `${RS[`opp_${k}_ypc`].toFixed(1)} ypc${RS[`opp_${k}_rank`] ? ` · ${ord(RS[`opp_${k}_rank`])}` : ''}`), h('td', 'num', RS[`lg_${k}_ypc`].toFixed(1)));
+        tb.appendChild(tr); });
+      t.appendChild(tb); c.appendChild(t);
+      c.appendChild(h('p', 'mm-note cv-exp', `${x.opp} allows ${RS.opp_all_ypc.toFixed(1)} yds/carry overall (league ${RS.lg_all_ypc.toFixed(1)}); that part is already in his matchup. This card is about fit: ${RS.note.replace(/^runs mostly [^;]*; /, '')}.`));
+      const ef = h('div', 'cv-eff'); const chip = (l, v) => { const d = h('div', 'cv-e'); d.append(h('span', '', l), h('b', cl(v), pf(v))); ef.appendChild(d); };
+      chip('Run-style fit', RS.eff_run); chip('All scheme', RS.eff_scheme); c.appendChild(h('div', 'cv-h', 'Effect on his rushing-yards projection')); c.appendChild(ef);
+      c.appendChild(h('p', 'cv-src', 'All scheme also counts the defense\'s stuff rate and explosive runs allowed. Rank 1 = softest lane in the league.'));
+    }
+  } catch (e) { /* run card is optional */ }
   // --- 10K sim (when his game has been simulated)
   const SM = (MM.ok('sim_median') || []).find((r) => r.player === x.player), SS = (MM.ok('sim_scorers') || []).find((r) => r.player === x.player);
   if (SM || SS) {
