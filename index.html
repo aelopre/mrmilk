@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028000652', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028004715', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -444,6 +444,9 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-match li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 2px; background: var(--d, var(--mm-mut)); }
 .mm-pf-match li.weak { --d: var(--mm-hit); } .mm-pf-match li.strong { --d: var(--mm-miss); }
 .mm-pf-match li b { color: var(--mm-txt); }
+.mm-pf-cb { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--mm-line); border-radius: 10px; background: rgba(255,255,255,.02); }
+.mm-pf-cb .hd { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--mm-mut); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+.mm-pf-cb .cb { display: grid; gap: 1px; } .mm-pf-cb .cb b { font-size: 18px; color: var(--mm-txt); } .mm-pf-cb .cb .mm-note { font-size: 14px; }
 .mm-link { all: unset; cursor: pointer; color: var(--mm-cyan); font-weight: 700; font-size: 14px; }
 .mm-link:hover { text-decoration: underline; }
 .mm-link:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; border-radius: 3px; }
@@ -723,6 +726,16 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
         </table>
       </div>
     </div>
+    <div class="mm-card" id="dvp-cb-card" hidden>
+      <h2>WR vs CB, Week 8</h2>
+      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). Pick a team above to filter. Source: Edgehalla.</p>
+      <div class="mm-scroll">
+        <table class="mm-table" id="dvp-cb-table" data-source="pl_cb" data-row-key="id">
+          <thead><tr data-draw="dvp_cb_head" data-source="pl_cb"></tr></thead>
+          <tbody data-draw="dvp_cb_rows" data-source="pl_cb"></tbody>
+        </table>
+      </div>
+    </div>
     <div class="mm-card" id="dvp-chart-card">
       <h2 data-draw="dvp_chart_title" data-source="dvp">Allowed per game</h2>
       <p class="mm-note">All 32 defenses, per game played. The dashed line is the league average.</p>
@@ -752,7 +765,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
     </div>
-    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
   </section>
 </div>
 
@@ -1284,6 +1297,52 @@ dash.draw('dvp_chart', function dvpChart(el) { if (MM.later(el, dvpChart)) retur
   g.append('text').attr('x', (r) => x(r[k]) + 5).attr('y', rowH / 2).attr('dy', '0.32em').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text((r) => MMD.fmt(k, r[k]));
   svg.append('line').attr('x1', x(avg)).attr('x2', x(avg)).attr('y1', m.t - 6).attr('y2', H - m.b).attr('stroke', 'var(--mm-gb)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
   svg.append('text').attr('x', x(avg)).attr('y', 12).attr('text-anchor', 'middle').attr('fill', 'var(--mm-gb)').attr('font-size', 12).attr('font-weight', 700).text(`League avg ${MMD.fmt(k, avg)}`);
+});
+/* ---------- WR vs CB (Edgehalla) ---------- */
+const MMCB = (() => {
+  const MO = { Favorable: 0, Neutral: 1, Tough: 2 };
+  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
+  const TXT = new Set(['player', 'team', 'align', 'cb1']);
+  const state = () => {
+    const L = MM.ok('pl_cb'); if (!L) return null; const p = dash.params();
+    const key = KEYS[p.cb_sort] ? p.cb_sort : 'matchup'; const dir = p.cb_dir === 'asc' || p.cb_dir === 'desc' ? p.cb_dir : (key === 'matchup' || TXT.has(key) || key === 'cb1_rank' ? 'asc' : 'desc');
+    const fx = (t) => (t === 'LAR' ? 'LA' : t); const team = p.dvp_team || null;
+    let rows = L.filter((r) => !team || fx(r.team) === team || fx(r.opp) === team);
+    const f = KEYS[key]; rows = rows.slice().sort((a, b) => { const x = f(a), y = f(b); const c = typeof x === 'string' ? x.localeCompare(y) : x - y; return dir === 'asc' ? c : -c; });
+    return { key, dir, rows, team };
+  };
+  const th = (tr, s, text, cls, key) => {
+    const h = document.createElement('th'); if (cls) h.className = cls; const on = s.key === key;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mm-sort' + (on ? ' on' : ''); b.textContent = text + (on ? (s.dir === 'asc' ? ' ▲' : ' ▼') : '');
+    h.setAttribute('aria-sort', on ? (s.dir === 'asc' ? 'ascending' : 'descending') : 'none'); b.title = 'Sort by ' + text.toLowerCase();
+    b.onclick = () => dash.setParams({ cb_sort: key, cb_dir: on ? (s.dir === 'asc' ? 'desc' : 'asc') : null }); h.appendChild(b); tr.appendChild(h);
+  };
+  const SIDE = { L: 'L', R: 'R', N: 'Slot' };
+  return { state, th, SIDE };
+})();
+dash.draw('dvp_cb_head', (tr) => {
+  const card = document.getElementById('dvp-cb-card'); const p = dash.params(); const pos = p.dvp_pos || 'QB';
+  if (card) card.hidden = pos !== 'WR';
+  const s = MMCB.state(); tr.replaceChildren(); if (!s) return;
+  MMCB.th(tr, s, 'Receiver', '', 'player'); MMCB.th(tr, s, 'Matchup', '', 'matchup'); MMCB.th(tr, s, 'Team', 'mm-hide-sm', 'team'); tr.appendChild(Object.assign(document.createElement('th'), { textContent: 'vs' }));
+  MMCB.th(tr, s, 'Lines up', 'mm-hide-sm', 'align'); MMCB.th(tr, s, 'Likely corner', '', 'cb1');
+  MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
+});
+dash.draw('dvp_cb_rows', (tb) => {
+  const s = MMCB.state(); tb.replaceChildren(); if (!s) return;
+  s.rows.forEach((r) => {
+    const tr = document.createElement('tr'); tr.dataset.key = r.id;
+    const td0 = document.createElement('td'); const b = document.createElement('button'); b.type = 'button'; b.className = 'mm-link'; b.textContent = r.player;
+    b.onclick = () => { try { MMP.open(r.player); } catch (e) { /* profiles optional */ } }; td0.appendChild(b); tr.appendChild(td0);
+    const td = document.createElement('td'); const tag = document.createElement('span'); tag.className = 'mm-rk ' + (r.matchup === 'Favorable' ? 'mm-tier-soft' : r.matchup === 'Tough' ? 'mm-tier-tough' : ''); tag.textContent = r.matchup; td.appendChild(tag); tr.appendChild(td);
+    MMD.teamCell(tr, r.team); if (tr.lastElementChild) tr.lastElementChild.classList.add('mm-hide-sm'); MMD.teamCell(tr, r.opp);
+    MM.cell(tr, r.align + (r.proxy ? '*' : ''), 'mm-hide-sm');
+    const c = MM.cell(tr, r.cb1 + (r.cb2 ? ` / ${r.cb2}` : '')); const sm = document.createElement('small'); sm.textContent = MMCB.SIDE[r.cb1_side] || ''; c.appendChild(sm);
+    MM.cell(tr, r.cb1_tgt != null ? String(r.cb1_tgt) : '—', 'num mm-hide-sm');
+    MM.cell(tr, r.cb1_rtg != null ? String(r.cb1_rtg) : '—', 'num ' + (r.cb1_rtg >= 105 ? 'mm-tier-soft' : r.cb1_rtg != null && r.cb1_rtg <= 75 ? 'mm-tier-tough' : ''));
+    MM.cell(tr, r.cb1_rank ? `#${r.cb1_rank}` : '—', 'num');
+    tb.appendChild(tr);
+  });
 });
 dash.draw('dvp_team_sel', (sel) => {
   const s = MMD.state(); sel.replaceChildren(); if (!s) return;
@@ -2184,6 +2243,18 @@ dash.draw('pl_profile', (el) => {
       const big = h('div', 'big'); const rk = dr.fpts_rank; const v = h('b', MMD.tier(rk), ord(rk)); big.append(v, h('span', 'mm-note', `${rk <= 16 ? 'softest' : 'toughest'} vs ${x.pos}s: ${f1(dr.fpts)} fantasy pts allowed per game (${dr.fpts_vs_avg >= 0 ? '+' : '−'}${pc(Math.abs(dr.fpts_vs_avg))} vs average).`));
       if (rk > 16) v.textContent = ord(33 - rk);
       box.appendChild(big);
+      try {
+        const CB = (MM.ok('pl_cb') || []).find((r) => r.player === x.player);
+        if (CB) {
+          const SN = { L: 'left corner', R: 'right corner', N: 'nickel / slot' };
+          const cbd = h('div', 'mm-pf-cb'); const hd = h('div', 'hd');
+          hd.append(h('span', 'l', `Lines up ${CB.align.toLowerCase()}${CB.proxy ? ' (estimate)' : ''} · likely corner`), h('span', 'mm-rk ' + (CB.matchup === 'Favorable' ? 'mm-tier-soft' : CB.matchup === 'Tough' ? 'mm-tier-tough' : ''), CB.matchup)); cbd.appendChild(hd);
+          const one = (n, sd, t, rt, rk) => { const d = h('div', 'cb'); d.append(h('b', '', n), h('span', 'mm-note', [SN[sd], t != null ? `${t} targets` : null, rt != null ? `${rt} passer rating allowed` : null, rk ? `#${rk} of 130 corners` : null].filter(Boolean).join(' · '))); cbd.appendChild(d); };
+          one(CB.cb1, CB.cb1_side, CB.cb1_tgt, CB.cb1_rtg, CB.cb1_rank); if (CB.cb2) one(CB.cb2, CB.cb2_side, CB.cb2_tgt, CB.cb2_rtg, CB.cb2_rank);
+          if (CB.opp_pts_tgt != null) cbd.appendChild(h('p', 'mm-note', `${x.opp} gives up ${CB.opp_pts_tgt.toFixed(2)} fantasy pts per target to WRs (${ord(33 - CB.opp_pts_rank)} most in the league). Based on alignment, not shadow coverage. Source: Edgehalla.`));
+          box.appendChild(cbd);
+        }
+      } catch (e) { /* CB matchup is optional */ }
       try {
         const rep = MMSC.build(opp, D, T); const items = rep ? rep.items.filter((it) => !it.pos || it.pos === x.pos).slice(0, 3) : [];
         if (items.length) { const ul = h('ul'); items.forEach((it) => { const li = h('li', it.cls); li.innerHTML = it.html; ul.appendChild(li); }); box.appendChild(ul); }
