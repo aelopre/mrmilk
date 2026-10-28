@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028091919', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028095616', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -443,6 +443,15 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-why-tg { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; cursor: pointer; flex: none; }
 .mm-why-tg:hover { background: rgba(255,255,255,.12); } .mm-why-tg:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
 .mm-why:not(.open) li.more { display: none; } .mm-why-more { justify-self: start; font-size: 14px; }
+.mm-cons { margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--mm-line); border-left: 4px solid var(--mm-line); background: rgba(255,255,255,.03); }
+.mm-cons.tone-good { border-left-color: var(--mm-gold); } .mm-cons.tone-bad { border-left-color: var(--mm-cyan); }
+.mm-cons-k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; } .mm-cons-v { font-weight: 700; margin-top: 2px; } .mm-cons-s { font-size: 13px; opacity: .85; margin-top: 2px; }
+.mm-cons-card { margin-bottom: 14px; } .mm-cons-card:not(.open) .mm-cons-grid, .mm-cons-card:not(.open) > .mm-note { display: none; }
+.mm-cons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } @media (max-width: 640px) { .mm-cons-grid { grid-template-columns: 1fr; } }
+.mm-cons-col h3 { margin: 4px 0 6px; font-size: 14px; } .mm-cons-col.higher h3 { color: var(--mm-gold); } .mm-cons-col.lower h3 { color: var(--mm-cyan); }
+.mm-cons-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; width: 100%; text-align: left; padding: 7px 8px; margin-bottom: 4px; border-radius: 8px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.03); color: inherit; font: inherit; cursor: pointer; }
+.mm-cons-row:hover { background: rgba(255,255,255,.08); } .mm-cons-row:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
+.mm-cons-row .n { font-weight: 700; } .mm-cons-row .p { font-size: 12px; opacity: .7; text-align: right; } .mm-cons-row .m { grid-column: 1 / -1; font-size: 12.5px; opacity: .85; }
 .mm-pf-proj tr.fp td { font-weight: 800; border-top: 1px solid var(--mm-line); color: var(--mm-gold); }
 .mm-pf-meff { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 12px; }
 .mm-pf-meff .l { color: var(--mm-mut); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; } .mm-pf-meff b { font-family: var(--mm-display); font-weight: 400; font-size: 28px; line-height: 1; } .mm-pf-meff b.mm-tier-soft { color: var(--mm-hit); } .mm-pf-meff b.mm-tier-tough { color: var(--mm-miss); }
@@ -827,11 +836,12 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <label>Team <select data-draw="pl_team_sel" data-source="proj_players"></select></label>
       <label>Position <select data-draw="pl_pos_sel" data-source="proj_players"></select></label>
     </div>
+    <div class="mm-card mm-cons-card" data-draw="pl_cons_card" data-source="pl_cons"></div>
     <div class="mm-pl-layout">
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
     </div>
-    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cons"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
   </section>
 </div>
 
@@ -2245,6 +2255,29 @@ dash.draw('pl_pos_sel', (sel) => {
   sel.replaceChildren(); [['', 'All positions'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']].forEach(([v, l]) => sel.appendChild(new Option(l, v)));
   sel.value = dash.params().pl_pos || ''; sel.onchange = () => dash.setParams({ pl_pos: sel.value || null });
 });
+dash.draw('pl_cons_card', (el) => {
+  const d = MM.ok('pl_cons'); el.replaceChildren(); if (!d) return; const h = MMP.h; const p = dash.params();
+  const top = h('div', 'mm-why-top'); top.appendChild(h('h2', '', 'Where we disagree with the experts'));
+  const tg = h('button', 'mm-why-tg'); tg.type = 'button'; top.appendChild(tg); el.appendChild(top);
+  el.appendChild(h('p', 'mm-note', 'Players where our PPR projection differs most from the expert consensus this week. Higher = we like him more than the experts do. QBs compare projected points; RB/WR/TE compare overall ranks. A disagreement is not a pick on its own; it just shows where to look closer. Tap a name to open his profile.'));
+  const body = h('div', 'mm-cons-grid');
+  const pool = d.filter((r) => r.big && (!p.pl_team || r.team === p.pl_team) && (!p.pl_pos || r.pos === p.pl_pos));
+  const col = (side, title) => {
+    const w = h('div', 'mm-cons-col ' + side); w.appendChild(h('h3', '', title));
+    const sc = (r) => r.kind === 'pts' ? Math.abs(r.gap) * 8 : Math.abs(r.gap) * (r.cons_rk <= 60 || r.our_rk <= 60 ? 1.5 : 1); const rows = pool.filter((r) => r.side === side && (r.kind === 'pts' || r.cons_rk <= 110 || r.our_rk <= 110)).sort((a, b) => sc(b) - sc(a)).slice(0, 8);
+    if (!rows.length) w.appendChild(h('p', 'mm-note', 'None for this filter.'));
+    rows.forEach((r) => {
+      const b = h('button', 'mm-cons-row'); b.type = 'button'; b.onclick = () => MMP.open(r.player);
+      const det = r.kind === 'pts' ? `Us ${r.ours.toFixed(1)} vs experts ${r.cons_pts.toFixed(1)} pts` : `Us ${r.our_pos} vs experts ${r.cons_pos}`;
+      b.append(h('span', 'n', r.player), h('span', 'p', `${r.pos} · ${r.team}`), h('span', 'm', det)); w.appendChild(b);
+    });
+    return w;
+  };
+  body.append(col('higher', 'We\u2019re higher'), col('lower', 'We\u2019re lower')); el.appendChild(body);
+  let open = false; try { open = localStorage.getItem('mm_cons_open') === '1'; } catch (e) {}
+  const set = (o) => { el.classList.toggle('open', o); tg.textContent = o ? '\u2212' : '+'; tg.setAttribute('aria-expanded', String(o)); tg.setAttribute('aria-label', o ? 'Hide disagreements' : 'Show disagreements'); try { localStorage.setItem('mm_cons_open', o ? '1' : '0'); } catch (e) {} };
+  tg.onclick = () => set(!el.classList.contains('open')); set(open);
+});
 dash.draw('pl_list', (el) => {
   const m = MMP.all(); el.replaceChildren(); if (!m) return; const p = dash.params(); const q = '';
   const list = Array.from(m.values()).filter((x) => (!p.pl_team || x.team === p.pl_team) && (!p.pl_pos || x.pos === p.pl_pos) && (!q || x.player.toLowerCase().includes(q)))
@@ -2353,6 +2386,20 @@ dash.draw('pl_profile', (el) => {
       tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num g', fmt(st, r.week)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), effTxt)); tb.appendChild(tr);
     });
     t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); c.appendChild(sw);
+    const CN = (MM.ok('pl_cons') || []).find((r) => r.player === x.player);
+    if (CN) {
+      const bx = h('div', 'mm-cons tone-' + (CN.side === 'higher' ? 'good' : CN.side === 'lower' ? 'bad' : 'info'));
+      bx.appendChild(h('div', 'mm-cons-k', 'Expert consensus'));
+      let main, sub;
+      if (CN.kind === 'pts') {
+        main = `Experts: ${CN.cons_pts.toFixed(1)} pts (${CN.cons_pos}) · Us: ${CN.ours.toFixed(1)} pts (${CN.our_pos})`;
+        sub = CN.side === 'same' ? 'We basically agree with the experts on him this week.' : `We're ${Math.abs(CN.gap).toFixed(1)} points ${CN.side} than the experts.`;
+      } else {
+        main = `Experts rank him ${CN.cons_pos} (#${CN.cons_rk} among all RB/WR/TE) · We have him ${CN.our_pos} (#${CN.our_rk})`;
+        sub = Math.abs(CN.gap) < 10 ? 'We basically agree with the experts on him this week.' : `We're ${CN.side} on him than the experts by ${Math.abs(CN.gap)} spots.`;
+      }
+      bx.append(h('div', 'mm-cons-v', main), h('div', 'mm-cons-s', sub)); c.appendChild(bx);
+    }
   }
   // --- why this projection
   const WY = (MM.ok('pl_why') || []).find((r) => r.player === x.player);
