@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027194946', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027200350', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -333,6 +333,48 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-view { display: block; width: 100%; border-radius: 8px; background: #070B18; box-shadow: inset 0 0 0 1px var(--mm-line); }
 @media (max-width: 480px) { .mm-sb-team { padding: 4px 10px; gap: 4px; } .mm-sb-name { font-size: 20px; gap: 5px; } .mm-sb-score { font-size: 34px; } .mm-sb-team.away { padding-left: 16px; } .mm-sb-team.home { padding-right: 16px; } .mm-sb-mid { min-width: 0; padding: 6px 8px; } .mm-sb-dd { font-size: 11px; } .mm-sb-clock { font-size: 24px; } .mm-btn { font-size: 18px; padding: 7px 12px 5px; } }
 
+/* median game + findings */
+.mm-med-wrap { max-height: none; display: grid; gap: 14px; }
+.mm-med { width: 100%; min-width: 34rem; border-collapse: separate; border-spacing: 0 3px; font-variant-numeric: tabular-nums; }
+.mm-med th { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--mm-mut); text-transform: uppercase; padding: 0 8px 2px; text-align: center; white-space: nowrap; }
+.mm-med th:first-child { text-align: left; font-family: var(--mm-display); font-weight: 400; font-size: 21px; letter-spacing: .03em; color: var(--mm-gold); padding-left: 0; }
+.mm-med td { background: rgba(21,33,64,.75); padding: 5px 8px; text-align: center; white-space: nowrap; }
+.mm-med tr:nth-child(even) td { background: rgba(16,26,48,.9); }
+.mm-med td:first-child { text-align: left; border-left: 4px solid var(--tc, var(--mm-gold)); border-radius: 4px 0 0 4px; width: 34%; }
+.mm-med td:last-child { border-radius: 0 4px 4px 0; }
+.mm-med td.car { --tc: #0085CA; } .mm-med td.gb { --tc: #FFB81C; }
+.mm-med .nm { font-family: var(--mm-display); font-size: 21px; letter-spacing: .02em; color: var(--mm-txt); }
+.mm-med .tm { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--mm-mut); margin-left: 6px; }
+.mm-med .v { font-family: var(--mm-display); font-size: 23px; color: var(--mm-txt); }
+.mm-med .a { font-size: 11px; font-weight: 600; color: var(--mm-mut); margin-left: 3px; }
+.mm-med .pct { font-family: var(--mm-display); font-size: 23px; color: var(--mm-cyan); }
+.mm-find { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); align-items: start; }
+.mm-find-col { display: grid; gap: 8px; }
+.mm-find-col h3 { margin: 0; font-family: var(--mm-display); font-weight: 400; font-size: 22px; letter-spacing: .03em; color: var(--mm-cyan); }
+.mm-fr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; background: rgba(16,26,48,.9); border: 1px solid var(--mm-line); border-left: 4px solid var(--tc, var(--mm-gold)); border-radius: 10px; padding: 10px 14px; }
+.mm-fr.car { --tc: #0085CA; } .mm-fr.gb { --tc: #FFB81C; }
+.mm-fr .c { font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--mm-gold); }
+.mm-fr .c span { color: var(--mm-mut); font-weight: 600; }
+.mm-fr .n { font-family: var(--mm-display); font-size: 25px; line-height: 1.05; color: var(--mm-txt); }
+.mm-fr .bx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mm-fr .bx span { background: #18264A; border-radius: 6px; padding: 3px 8px; font-size: 13px; color: var(--mm-mut); font-weight: 600; }
+.mm-fr .bx b { color: var(--mm-txt); font-weight: 700; margin-right: 4px; }
+.mm-fr .h { text-align: center; min-width: 5.5rem; }
+.mm-fr .h b { display: block; font-family: var(--mm-display); font-weight: 400; font-size: 38px; line-height: 1; color: var(--mm-cyan); }
+.mm-fr .h span { font-size: 12px; font-weight: 700; color: var(--mm-mut); letter-spacing: .03em; }
+/* live player layout: game left, both box scores right on wide screens; one box at a time on phones */
+.mm-live-game { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.mm-lp-tabs { display: none; }
+@media (min-width: 1100px) {
+  .mm-live { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .mm-lp-grid { display: contents; }
+  .mm-lp-b { gap: 6px; }
+}
+@media (max-width: 639px) {
+  .mm-lp-tabs { display: inline-flex; justify-self: start; }
+  .mm-lp-grid[data-show="CAR"] .mm-lp.gb, .mm-lp-grid[data-show="GB"] .mm-lp.car { display: none; }
+}
+
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
 @media (max-width: 640px) { .mm-hide-sm { display: none; } .mm-tile .mm-big { font-size: 38px; } .mm-tab { font-size: 19px; padding: 5px 14px 3px; } }
@@ -441,40 +483,14 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       </div>
     </div>
     <div class="mm-card" id="medians-card">
-      <h2>The median game, as a box score</h2>
-      <p class="mm-note">Each player's median stat line across 10,000 sims: half the sims land above it, half below. TD % is the share of sims where he scored that way.</p>
-      <div class="mm-box-grid">
-      <div class="mm-box-team" id="box-car">
-        <div class="mm-box-head mm-box-car"><span>Panthers</span><span class="mm-box-score">avg <b data-draw="box_score_car" data-source="sim_games" data-field="away_avg" data-row="0">—</b> pts</span></div>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Passing</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="cmp_att" class="num">C/Att</th><th data-field="pyd" class="num">Yds</th><th data-field="ptd" class="num">TD</th><th data-field="int" class="num">Int</th></tr></thead>
-          <tbody data-draw="box_pass_car"></tbody>
-        </table>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Rushing</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="car" class="num">Car</th><th data-field="ryd" class="num">Yds</th><th data-field="ypc" class="num">Avg</th><th data-field="rtd" class="num">TD %</th></tr></thead>
-          <tbody data-draw="box_rush_car"></tbody>
-        </table>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Receiving</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="tgt" class="num">Tgt</th><th data-field="rec" class="num">Rec</th><th data-field="yd" class="num">Yds</th><th data-field="td" class="num">TD %</th></tr></thead>
-          <tbody data-draw="box_rec_car"></tbody>
-        </table>
-      </div>
-      <div class="mm-box-team" id="box-gb">
-        <div class="mm-box-head mm-box-gb"><span>Packers</span><span class="mm-box-score">avg <b data-draw="box_score_gb" data-source="sim_games" data-field="home_avg" data-row="0">—</b> pts</span></div>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Passing</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="cmp_att" class="num">C/Att</th><th data-field="pyd" class="num">Yds</th><th data-field="ptd" class="num">TD</th><th data-field="int" class="num">Int</th></tr></thead>
-          <tbody data-draw="box_pass_gb"></tbody>
-        </table>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Rushing</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="car" class="num">Car</th><th data-field="ryd" class="num">Yds</th><th data-field="ypc" class="num">Avg</th><th data-field="rtd" class="num">TD %</th></tr></thead>
-          <tbody data-draw="box_rush_gb"></tbody>
-        </table>
-        <table class="mm-table mm-box" data-source="sim_box" data-row-key="id">
-          <thead><tr><th data-field="player">Receiving</th><th data-field="pos" class="mm-pos-h"><span class="mm-sr">Pos</span></th><th data-field="tgt" class="num">Tgt</th><th data-field="rec" class="num">Rec</th><th data-field="yd" class="num">Yds</th><th data-field="td" class="num">TD %</th></tr></thead>
-          <tbody data-draw="box_rec_gb"></tbody>
-        </table>
-      </div>
-      </div>
+      <h2>The median game</h2>
+      <p class="mm-note">Each key player's middle-of-the-road stat line across 10,000 sims: half the sims land above it, half below. The small number is the average. Percentages are how often it happened.</p>
+      <div class="mm-scroll mm-med-wrap" data-draw="med_tables" data-source="sim_median"></div>
+    </div>
+    <div class="mm-card" id="findings-card">
+      <h2>What keeps showing up</h2>
+      <p class="mm-note">The patterns that repeat across all 10,000 simulated games. The big number is how often it happened.</p>
+      <div class="mm-find" data-draw="find_rows" data-source="sim_findings"></div>
     </div>
     </div>
   </section>
@@ -1469,9 +1485,13 @@ window.MMV = (() => {
     r.snd = h('button', 'mm-btn', '♪ Sound off'); r.snd.type = 'button'; r.snd.setAttribute('aria-pressed', 'false');
     ctl.append(r.play, seg, r.skip, r.again, r.snd);
     r.end = h('p', 'mm-live-end'); r.end.hidden = true;
-    r.grid = h('div', 'mm-lp-grid'); r.panels = {};
-    ['CAR', 'GB'].forEach((t) => { const p = h('div', 'mm-lp'); const hd = h('div', 'mm-lp-h ' + t.toLowerCase(), NM[t]); hd.appendChild(h('span', '', 'LIVE STATS')); const b = h('div', 'mm-lp-b'); p.append(hd, b); r.grid.appendChild(p); r.panels[t] = b; });
-    el.append(sb, f, play, r.prog, ctl, r.end, r.grid);
+    r.grid = h('div', 'mm-lp-grid'); r.grid.dataset.show = 'CAR'; r.panels = {};
+    const tabs = h('div', 'mm-seg mm-lp-tabs'); tabs.setAttribute('role', 'group'); tabs.setAttribute('aria-label', 'Box score team');
+    r.tabs = ['CAR', 'GB'].map((t) => { const b = h('button', 'mm-btn', NM[t]); b.type = 'button'; b.setAttribute('aria-pressed', String(t === 'CAR')); b.onclick = () => { r.grid.dataset.show = t; r.tabs.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; tabs.appendChild(b); return b; });
+    ['CAR', 'GB'].forEach((t) => { const p = h('div', 'mm-lp ' + t.toLowerCase()); const hd = h('div', 'mm-lp-h ' + t.toLowerCase(), NM[t]); hd.appendChild(h('span', '', 'LIVE STATS')); const b = h('div', 'mm-lp-b'); p.append(hd, b); r.grid.appendChild(p); r.panels[t] = b; });
+    const game = h('div', 'mm-live-game'); game.append(sb, f, play, r.prog, ctl, r.end);
+    const side = h('div', 'mm-live-side');
+    el.append(game, tabs, r.grid);
     return r;
   }
   function makeGame(L, gi) {
@@ -1646,6 +1666,49 @@ window.MMV = (() => {
     mount(el) { const st = {}; const L = lib(); if (L) init(el, st, L); return st; },
     update(el, st) { if (st.L) { if (st.g) idLabel(st); return; } const L = lib(); if (L) init(el, st, L); },
     unmount(el, st) { clearTimeout(st.timer); cancelAnimationFrame(st.raf); try { st.src && st.src.stop(); st.ac && st.ac.close(); } catch (e) {} },
+  });
+})();
+</script>
+<script>
+/* ---------- sim center: median game table + what keeps showing up ---------- */
+(() => {
+  const f1 = d3.format('.1f'), pc = d3.format('.0%');
+  const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const COLS = {
+    Quarterbacks: [['cmp', 'Cmp'], ['att', 'Att'], ['pyd', 'Pass yds'], ['ptd', 'Pass TD'], ['int', 'INT'], ['ryd', 'Rush yds']],
+    'Running backs': [['car', 'Car'], ['ryd', 'Rush yds'], ['rec', 'Rec'], ['yd', 'Rec yds'], ['touches', 'Touches'], ['anytd', 'Any TD']],
+    'Pass catchers': [['tgt', 'Tgt'], ['rec', 'Rec'], ['yd', 'Rec yds'], ['long20', 'Long 20+'], ['p100', '100+ yds'], ['anytd', 'TD']],
+  };
+  dash.draw('med_tables', (el) => {
+    const d = MM.ok('sim_median'); el.replaceChildren(); if (!d) return;
+    Object.keys(COLS).forEach((g) => {
+      const rows = d.filter((r) => r.group === g); if (!rows.length) return;
+      const t = h('table', 'mm-med'); const hr = h('tr'); hr.appendChild(h('th', '', g)); COLS[g].forEach(([, l]) => hr.appendChild(h('th', '', l)));
+      const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
+      rows.forEach((r) => {
+        const tr = h('tr'); tr.dataset.key = r.id; const n = h('td', String(r.team).toLowerCase()); n.append(h('span', 'nm', r.player), h('span', 'tm', `${r.pos} · ${r.team}`)); tr.appendChild(n);
+        COLS[g].forEach(([k]) => { const v = r[k], td = h('td');
+          if (v && typeof v === 'object') { td.appendChild(h('span', 'v', String(Math.round(v.med)))); td.appendChild(h('span', 'a', v.avg < 20 ? f1(v.avg) : String(Math.round(v.avg)))); }
+          else td.appendChild(h('span', 'pct', pc(v)));
+          tr.appendChild(td); });
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb); el.appendChild(t);
+    });
+  });
+  dash.draw('find_rows', (el) => {
+    const d = MM.ok('sim_findings'); el.replaceChildren(); if (!d) return;
+    Array.from(new Set(d.map((r) => r.group))).forEach((g) => {
+      const col = h('div', 'mm-find-col'); col.appendChild(h('h3', '', g));
+      d.filter((r) => r.group === g).forEach((r) => {
+        const row = h('div', 'mm-fr ' + String(r.team).toLowerCase()); row.dataset.key = r.id;
+        const left = h('div'); const c = h('div', 'c', r.cat + ' '); c.appendChild(h('span', '', `· ${r.pos} · ${r.team}`)); left.append(c, h('div', 'n', r.player));
+        const bx = h('div', 'bx'); r.boxes.forEach((b) => { const s = h('span'); s.appendChild(h('b', '', b.value)); s.append(b.label); bx.appendChild(s); }); left.appendChild(bx);
+        const hero = h('div', 'h'); hero.append(h('b', '', r.hero), h('span', '', r.cap));
+        row.append(left, hero); col.appendChild(row);
+      });
+      el.appendChild(col);
+    });
   });
 })();
 </script>
