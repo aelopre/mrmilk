@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028013642', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028020845', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -735,7 +735,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     </div>
     <div class="mm-card" id="dvp-cb-card" hidden>
       <h2>WR vs CB, Week 8</h2>
-      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). His total snaps = the receiver's projected snaps for the whole game (his share of plays over his last 3 games × his team's pace), not snaps against that corner. CB % of D tgts = how many of the defense's targets that corner was the man in coverage on (from PFR via nflverse), a reminder that one corner rarely covers anyone all game. Pick a team above to filter. Source: Edgehalla.</p>
+      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). His total snaps = the receiver's projected snaps for the whole game (his share of plays over his last 3 games × his team's pace), not snaps against that corner. CB % of D tgts = how many of the defense's targets that corner was the man in coverage on (from PFR via nflverse), a reminder that one corner rarely covers anyone all game. CB EPA/tgt in scheme = the corner's FTN 2026 EPA allowed per target in man and in zone, weighted by how often his defense plays each (Sharp); higher = easier for the receiver. Pick a team above to filter. Source: Edgehalla.</p>
       <div class="mm-scroll">
         <table class="mm-table" id="dvp-cb-table" data-source="pl_cb" data-row-key="id">
           <thead><tr data-draw="dvp_cb_head" data-source="pl_cb"></tr></thead>
@@ -1308,7 +1308,7 @@ dash.draw('dvp_chart', function dvpChart(el) { if (MM.later(el, dvpChart)) retur
 /* ---------- WR vs CB (Edgehalla) ---------- */
 const MMCB = (() => {
   const MO = { Favorable: 0, Neutral: 1, Tough: 2 };
-  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, snaps_proj: (r) => r.snaps_proj ?? -1, cb1_tshare: (r) => r.cb1_tshare ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
+  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, snaps_proj: (r) => r.snaps_proj ?? -1, cb1_sch_epa: (r) => r.cb1_sch_epa ?? -9, cb1_tshare: (r) => r.cb1_tshare ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
   const TXT = new Set(['player', 'team', 'align', 'cb1']);
   const state = () => {
     const L = MM.ok('pl_cb'); if (!L) return null; const p = dash.params();
@@ -1333,7 +1333,7 @@ dash.draw('dvp_cb_head', (tr) => {
   const s = MMCB.state(); tr.replaceChildren(); if (!s) return;
   MMCB.th(tr, s, 'Receiver', '', 'player'); MMCB.th(tr, s, 'Matchup', '', 'matchup'); MMCB.th(tr, s, 'Team', 'mm-hide-sm', 'team'); tr.appendChild(Object.assign(document.createElement('th'), { textContent: 'vs' }));
   MMCB.th(tr, s, 'Lines up', 'mm-hide-sm', 'align'); MMCB.th(tr, s, 'Likely corner', '', 'cb1');
-  MMCB.th(tr, s, 'His total snaps', 'num', 'snaps_proj'); MMCB.th(tr, s, 'CB % of D tgts', 'num mm-hide-sm', 'cb1_tshare'); MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
+  MMCB.th(tr, s, 'His total snaps', 'num', 'snaps_proj'); MMCB.th(tr, s, 'CB % of D tgts', 'num mm-hide-sm', 'cb1_tshare'); MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB EPA/tgt in scheme', 'num mm-hide-sm', 'cb1_sch_epa'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
 });
 dash.draw('dvp_cb_rows', (tb) => {
   const s = MMCB.state(); tb.replaceChildren(); if (!s) return;
@@ -1348,6 +1348,7 @@ dash.draw('dvp_cb_rows', (tb) => {
     MM.cell(tr, r.snaps_proj != null ? String(r.snaps_proj) : '—', 'num'); MM.cell(tr, r.cb1_tshare != null ? Math.round(r.cb1_tshare * 100) + '%' : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_tgt != null ? String(r.cb1_tgt) : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_rtg != null ? String(r.cb1_rtg) : '—', 'num ' + (r.cb1_rtg >= 105 ? 'mm-tier-soft' : r.cb1_rtg != null && r.cb1_rtg <= 75 ? 'mm-tier-tough' : ''));
+    MM.cell(tr, r.cb1_sch_epa != null ? (r.cb1_sch_epa > 0 ? '+' : r.cb1_sch_epa < 0 ? '−' : '') + Math.abs(r.cb1_sch_epa).toFixed(2) : '—', 'num mm-hide-sm ' + (r.cb1_sch_epa >= 0.25 ? 'mm-tier-soft' : r.cb1_sch_epa != null && r.cb1_sch_epa <= -0.1 ? 'mm-tier-tough' : ''));
     MM.cell(tr, r.cb1_rank ? `#${r.cb1_rank}` : '—', 'num');
     tb.appendChild(tr);
   });
@@ -2260,6 +2261,14 @@ dash.draw('pl_profile', (el) => {
           hd.append(h('span', 'l', `Lines up ${CB.align.toLowerCase()}${CB.proxy ? ' (estimate)' : ''} · likely corner`), h('span', 'mm-rk ' + (CB.matchup === 'Favorable' ? 'mm-tier-soft' : CB.matchup === 'Tough' ? 'mm-tier-tough' : ''), CB.matchup)); cbd.appendChild(hd);
           const one = (n, sd, t, rt, rk) => { const d = h('div', 'cb'); d.append(h('b', '', n), h('span', 'mm-note', [SN[sd], t != null ? `${t} targets` : null, rt != null ? `${rt} passer rating allowed` : null, rk ? `#${rk} of 130 corners` : null].filter(Boolean).join(' · '))); cbd.appendChild(d); };
           one(CB.cb1, CB.cb1_side, CB.cb1_tgt, CB.cb1_rtg, CB.cb1_rank); if (CB.cb2) one(CB.cb2, CB.cb2_side, CB.cb2_tgt, CB.cb2_rtg, CB.cb2_rank);
+          const sg = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+          if (CB.cb1_epa != null) {
+            const ln = CB.cb1.split(' ').filter((w) => !/^(Jr\.?|Sr\.?|II|III|IV)$/.test(w)).slice(-1)[0];
+            const zs = CB.opp_zone != null ? Math.round(CB.opp_zone) : null;
+            const sch = CB.cb1_man_epa != null && CB.cb1_zone_epa != null ? ` In man he allows ${sg(CB.cb1_man_epa)} EPA per target; in zone, ${sg(CB.cb1_zone_epa)}.${zs != null ? ` ${x.opp} plays zone ${zs}% of the time, so ${CB.cb1_zone_epa > CB.cb1_man_epa ? 'the weaker' : 'the stronger'} version of him is the one ${x.player.split(' ').slice(-1)[0]} sees most.` : ''}` : '';
+            cbd.appendChild(h('p', 'mm-note', `FTN 2026: ${ln} allows ${sg(CB.cb1_epa)} EPA per target with a ${Math.round(CB.cb1_succ * 100)}% success rate for the offense (lower is better for the defense).${sch}`));
+          }
+          if (CB.rx_man_yprr != null) cbd.appendChild(h('p', 'mm-note', `${x.player.split(' ').slice(-1)[0]} in 2026 (FTN): ${CB.rx_man_yprr.toFixed(2)} yds/route vs man, ${CB.rx_zone_yprr.toFixed(2)} vs zone, ${CB.rx_single_high_yprr.toFixed(2)} vs single-high, ${CB.rx_two_high_yprr.toFixed(2)} vs two-high.${CB.opp_man != null ? ` ${x.opp}: ${Math.round(CB.opp_man)}% man, ${Math.round(CB.opp_mofc)}% single-high (Sharp).` : ''}`));
           const mix = [1, 2, 3, 4, 5].map((i) => [CB['mix' + i + '_name'], CB['mix' + i + '_share']]).filter((m) => m[0]);
           if (mix.length && CB.d_tgts) {
             const nm = (n) => String(n).replace(/[^a-z]/gi, '').toLowerCase().replace(/(jr|sr|ii|iii|iv)$/, '');
