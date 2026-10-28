@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027235902', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028000652', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -1937,6 +1937,10 @@ window.MMP = (() => {
   const TB = { ARI: '#97233F', ATL: '#A71930', BAL: '#241773', BUF: '#00338D', CAR: '#0085CA', CHI: '#0B162A', CIN: '#FB4F14', CLE: '#311D00', DAL: '#003594', DEN: '#FB4F14', DET: '#0076B6', GB: '#1E4D3A', HOU: '#03202F', IND: '#002C5F', JAX: '#006778', KC: '#E31837', LV: '#000000', LAC: '#0080C6', LAR: '#003594', MIA: '#008E97', MIN: '#4F2683', NE: '#002244', NO: '#101820', NYG: '#0B2265', NYJ: '#125740', PHI: '#004C54', PIT: '#101820', SF: '#AA0000', SEA: '#002244', TB: '#D50A0A', TEN: '#0C2340', WAS: '#5A1414' };
   const MAIN = { QB: 'Pass Yds', RB: 'Rush Yds', WR: 'Rec Yds', TE: 'Rec Yds' };
   const ORDER = ['Pass Yds', 'Pass Att', 'Completions', 'Pass TD', 'Rush Yds', 'Rush Att', 'Receptions', 'Rec Yds', 'Targets'];
+  // display order per position, shared by the props table and the projections table
+  const POSORD = { QB: ['Pass Att', 'Completions', 'Pass Yds', 'Pass TD', 'INT', 'Passer rating', 'Rush Att', 'Rush Yds'], RB: ['Rush Att', 'Rush Yds', 'Targets', 'Receptions', 'Rec Yds'],
+    WR: ['Targets', 'Receptions', 'Rec Yds', 'Rush Att', 'Rush Yds'], TE: ['Targets', 'Receptions', 'Rec Yds', 'Rush Att', 'Rush Yds'] };
+  const rank = (pos, st) => { const o = POSORD[pos] || ORDER; const i = o.indexOf(st); return i < 0 ? 99 : i; };
   const LOGK = { 'Pass Yds': 'pyd', 'Pass Att': 'att', Completions: 'cmp', 'Pass TD': 'ptd', 'Rush Yds': 'ryd', 'Rush Att': 'car', Receptions: 'rec', 'Rec Yds': 'yd', Targets: 'tgt' };
   const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
   const pc = d3.format('.0%'), f1 = d3.format('.1f');
@@ -1994,7 +1998,7 @@ window.MMP = (() => {
     return s;
   }
   const roleOf = (name) => (MM.ok('pl_role') || []).find((r) => r.player === name);
-  return { TB, MAIN, ORDER, LOGK, h, pc, f1, ord, all, lineFor, open, jersey, roleOf };
+  return { TB, MAIN, ORDER, POSORD, rank, LOGK, h, pc, f1, ord, all, lineFor, open, jersey, roleOf };
 })();
 // any player name in the dashboard's tables opens his profile
 document.addEventListener('click', (e) => {
@@ -2128,7 +2132,7 @@ dash.draw('pl_profile', (el) => {
     const lad = MM.ok('proj_ladders'); const board = MM.ok('book_board') || [], thu = MM.ok('thu_picks') || [];
     const t = h('table', 'mm-table mm-pf-props'); const hr = h('tr'); ['Stat', 'Proj', 'Line', 'Over', 'Under'].forEach((c, i) => hr.appendChild(h('th', (i ? 'num' : '') + (i === 4 ? ' mm-hide-sm' : ''), c))); hr.appendChild(h('th', 'mm-hide-sm', 'Books'));
     const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
-    x.rows.slice().sort((a, b) => MMP.ORDER.indexOf(a.stat) - MMP.ORDER.indexOf(b.stat)).forEach((r) => {
+    x.rows.slice().sort((a, b) => MMP.rank(x.pos, a.stat) - MMP.rank(x.pos, b.stat)).forEach((r) => {
       const L = MMP.lineFor(x.player, r.stat, r); if (!L) return; const at = lad && MMX.at(lad, r.k, L.line);
       const tr = h('tr'); const sc = h('td', '', r.stat);
       const bp = board.find((b) => b.player === x.player && String(b.stat).endsWith(' ' + r.stat) && b.blend_prob >= 0.55), tp = thu.find((b) => b.player === x.player && b.stat === r.stat);
@@ -2146,7 +2150,7 @@ dash.draw('pl_profile', (el) => {
   // --- projections: every stat, neutral defense vs tough / soft / this week's actual defense
   const PJ = (MM.ok('pl_proj') || []).filter((r) => r.player === x.player);
   if (PJ.length && !x.out && !x.bye) {
-    const ORD = { QB: ['Pass Att', 'Completions', 'Pass Yds', 'Pass TD', 'INT', 'Passer rating', 'Rush Att', 'Rush Yds'], RB: ['Rush Att', 'Rush Yds', 'Targets', 'Receptions', 'Rec Yds'], WR: ['Targets', 'Receptions', 'Rec Yds', 'Rush Att', 'Rush Yds'], TE: ['Targets', 'Receptions', 'Rec Yds'] };
+    const ORD = MMP.POSORD;
     const by = Object.fromEntries(PJ.map((r) => [r.stat, r]));
     if (x.pos === 'QB' && by['Pass Att'] && by['Completions'] && by['Pass Yds'] && by['Pass TD']) {
       // interceptions: his season rate pulled toward the league's ~2.3%; passer rating from the projected line (NFL formula)
@@ -2160,8 +2164,8 @@ dash.draw('pl_profile', (el) => {
     }
     const tierTxt = { soft: 'soft', tough: 'tough', average: 'about average' };
     const opp = PJ[0].opp; const ot = (by['Pass Yds'] || by['Rec Yds'] || by['Rush Yds'] || PJ[0]).opp_tier;
-    const c = card('Projections', `Every stat we project. Neutral D = against a league-average defense. This week = his real matchup vs ${opp}, whose defense is ${tierTxt[ot] || 'about average'} for his main stat. Matchup effect = how much this week's defense and coverage move him.`);
-    const t = h('table', 'mm-table mm-pf-proj'); const hr = h('tr'); [['Stat', ''], ['Neutral D', 'num'], [`This week vs ${opp}`, 'num k'], ['Matchup effect', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
+    const c = card('Projections', `Every stat we project. Neutral = against a league-average defense. vs ${opp} = his real matchup this week (${opp}'s defense is ${tierTxt[ot] || 'about average'} for his main stat). Effect = how much that defense and coverage move him.`);
+    const t = h('table', 'mm-table mm-pf-proj'); const hr = h('tr'); [['Stat', ''], ['Neutral', 'num'], [`vs ${opp}`, 'num k'], ['Effect', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
     const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
     const fmt = (st, v) => (st.endsWith('Yds') || st === 'Passer rating' ? d3.format('.0f')(v) : st === 'Pass TD' || st === 'INT' ? d3.format('.2f')(v) : d3.format('.1f')(v));
     (ORD[x.pos] || []).filter((st) => by[st]).forEach((st) => {
