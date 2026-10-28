@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027233757', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027235902', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -490,14 +490,14 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-why li.tone-warn { color: #FFE3A0; }
 .mm-why-key { margin: 0; font-size: 12px; color: var(--mm-mut); }
 
-/* clear (x) button inside search boxes */
-.mm-clearwrap { position: relative; display: block; }
-.mm-clearwrap input { padding-right: 38px !important; width: 100%; box-sizing: border-box; }
-.mm-clearwrap input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
-.mm-clear { all: unset; box-sizing: border-box; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: #C9D3E6; background: rgba(255,255,255,.08); font-size: 26px; font-weight: 600; line-height: 1; font-family: var(--mm-text); }
-.mm-clear:hover { color: var(--mm-txt); background: rgba(255,255,255,.08); }
-.mm-clear:focus-visible { outline: 2px solid var(--mm-cyan); }
-.mm-clear[hidden] { display: none; }
+.mm-pf-line { display: flex; flex-wrap: wrap; gap: 1px; width: 100%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; overflow: hidden; }
+.mm-pf-line .c { flex: 1 1 5.4rem; background: rgba(7,11,24,.72); padding: 7px 10px 8px; display: grid; gap: 1px; align-content: start; min-width: 0; }
+.mm-pf-line .l { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mm-cyan); white-space: nowrap; }
+.mm-pf-line .v { font-family: var(--mm-display); font-size: 30px; line-height: 1.05; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mm-pf-line .c.hi .v { color: var(--mm-gold); }
+.mm-pf-line .s { font-size: 12px; color: #9FB0CC; line-height: 1.25; }
+.mm-pf-line .c { min-width: 0; }
+@media (max-width: 480px) { .mm-pf-line .c { flex-basis: 30%; } .mm-pf-line .v { font-size: 25px; } }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 [data-dash-source-state=empty] { color: transparent; }
@@ -2081,15 +2081,30 @@ dash.draw('pl_profile', (el) => {
   const nm = h('h2', 'mm-pf-name', x.player);
   const sub = h('div', 'mm-pf-sub'); const chip = h('span', 'mm-team ' + x.team.toLowerCase(), x.team); sub.append(chip, h('span', 'pos', x.pos), h('span', '', x.bye ? `On bye in Week 8 · ${x.kickoff}` : `${x.game} · ${x.kickoff}`));
   const stt = String(x.status || 'Healthy'); const sc = /out|ir|reserve|inactive/i.test(stt) || x.out ? 'o' : /quest|doubt/i.test(stt) ? 'q' : x.bye ? 'q' : ''; sub.appendChild(h('span', 'mm-pf-status ' + sc, x.bye ? (stt === 'Active' ? 'On bye' : stt) : x.out && !/out|ir/i.test(stt) ? 'Not expected to play' : stt));
-  const roles = h('div', 'mm-pf-roles');
-  const role = (v, t) => { const s = h('span'); s.appendChild(h('b', '', v)); s.append(t); roles.appendChild(s); };
-  if (R) {
-    role(String(R.games), 'games');
-    if (R.snap_pct != null) role(pc(R.snap_pct), 'of snaps');
-    if (x.pos === 'QB') { const a = d3.mean(LOG, (r) => r.att) || 0, yd = d3.mean(LOG, (r) => r.pyd) || 0; role(f1(a), 'pass att per game'); role(String(Math.round(yd)), 'pass yds per game'); }
-    if (x.pos !== 'QB' && R.tgt_share != null) role(pc(R.tgt_share), `target share (${ord(R.tgt_rank)} on ${x.team})`);
-    if (x.pos !== 'QB') role(f1(R.tgt_pg), 'targets per game');
-    if (x.pos === 'RB' && R.car_share != null) { role(pc(R.car_share), `carry share (${ord(R.car_rank)} on ${x.team})`); role(f1(R.car_pg), 'carries per game'); }
+  // season stat line: what matters for his position, per game unless it's a season total
+  const roles = h('div', 'mm-pf-line');
+  const G = LOG.length, sum = (k) => d3.sum(LOG, (r) => r[k] || 0), pg = (k) => (G ? sum(k) / G : 0);
+  const cell = (lab, val, sub, hi) => { const c = h('div', 'c' + (hi ? ' hi' : '')); c.append(h('span', 'l', lab), h('span', 'v', val)); if (sub) c.appendChild(h('span', 's', sub)); roles.appendChild(c); };
+  const snaps = R && R.snap_pct != null ? pc(R.snap_pct) : '—';
+  if (!G) cell('Games', '0', 'no games yet');
+  else if (x.pos === 'QB') {
+    const att = sum('att'), cmp = sum('cmp'), yd = sum('pyd'), td = sum('ptd'), it = sum('int');
+    const cl = (v) => Math.max(0, Math.min(2.375, v));
+    const rate = att ? (cl((cmp / att - 0.3) * 5) + cl((yd / att - 3) * 0.25) + cl(td / att * 20) + cl(2.375 - it / att * 25)) / 6 * 100 : 0;
+    cell('Games', String(G)); cell('Pass yds', d3.format('.0f')(yd / G), 'per game', 1); cell('Cmp / Att', `${f1(cmp / G)}/${f1(att / G)}`, `${att ? pc(cmp / att) : '—'} completions`);
+    cell('Pass TD', String(td), `${f1(td / G)} per game`); cell('INT', String(it), `${f1(it / G)} per game`); cell('Rating', d3.format('.1f')(rate), 'passer rating', 1);
+    cell('Rush yds', d3.format('.0f')(pg('ryd')), `${f1(pg('car'))} carries a game`); cell('Rush TD', String(sum('rtd'))); cell('Snaps', snaps);
+  } else if (x.pos === 'RB') {
+    const car = sum('car'), ry = sum('ryd');
+    cell('Games', String(G)); cell('Rush yds', d3.format('.0f')(ry / G), 'per game', 1); cell('Carries', f1(car / G), R && R.car_share != null ? `${pc(R.car_share)} of team (${ord(R.car_rank)})` : 'per game');
+    cell('Yds / carry', car ? f1(ry / car) : '—'); cell('Rush TD', String(sum('rtd')));
+    cell('Targets', f1(pg('tgt')), 'per game'); cell('Rec', f1(pg('rec')), 'per game'); cell('Rec yds', d3.format('.0f')(pg('yd')), 'per game', 1); cell('Rec TD', String(sum('td'))); cell('Snaps', snaps);
+  } else {
+    const tg = sum('tgt'), rc = sum('rec'), yd = sum('yd');
+    cell('Games', String(G)); cell('Rec yds', d3.format('.0f')(yd / G), 'per game', 1); cell('Targets', f1(tg / G), R && R.tgt_share != null ? `${pc(R.tgt_share)} of team (${ord(R.tgt_rank)})` : 'per game');
+    cell('Rec', f1(rc / G), `${tg ? pc(rc / tg) : '—'} catch rate`); cell('Yds / rec', rc ? f1(yd / rc) : '—', `${tg ? f1(yd / tg) : '—'} per target`); cell('Rec TD', String(sum('td')));
+    if (sum('car') >= 3) cell('Rush yds', d3.format('.0f')(pg('ryd')), `${f1(pg('car'))} carries a game`);
+    cell('Snaps', snaps);
   }
   const badge = MMP.jersey(x.team, R ? R.jersey : null, x.pos, 66); badge.classList.add('mm-pf-badge');
   const id = h('div', 'mm-pf-id'); const row = h('div', 'mm-pf-namerow'); row.append(badge, nm); id.append(row, sub);   // number sits on the name's line
