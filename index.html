@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028023047', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028023829', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -445,6 +445,11 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-cov .cv-s { border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; background: rgba(255,255,255,.02); }
 .mm-pf-cov .cv-s b { font-family: var(--mm-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--mm-gold); } .mm-pf-cov .cv-s span { color: var(--mm-mut); font-size: 13px; line-height: 1.25; }
 .mm-pf-cov .cv-exp { font-size: 14px; }
+.mm-pf-cov .cv-eff { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mm-pf-cov .cv-e { border: 1px solid var(--mm-line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.mm-pf-cov .cv-e span { color: var(--mm-mut); font-size: 12px; line-height: 1.2; } .mm-pf-cov .cv-e b { font-family: var(--mm-display); font-weight: 400; font-size: 26px; line-height: 1; color: var(--mm-txt); }
+.mm-pf-cov .cv-e b.mm-tier-soft { color: var(--mm-hit); } .mm-pf-cov .cv-e b.mm-tier-tough { color: var(--mm-miss); }
+
 .mm-pf-cov .cv-why { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .mm-pf-cov .cv-why li { font-size: 15px; line-height: 1.35; padding-left: 14px; position: relative; }
 .mm-pf-cov .cv-why li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 2px; background: var(--d, var(--mm-mut)); }
@@ -755,7 +760,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
     </div>
     <div class="mm-card" id="dvp-cb-card" hidden>
       <h2>WR vs CB, Week 8</h2>
-      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). His total snaps = the receiver's projected snaps for the whole game (his share of plays over his last 3 games × his team's pace), not snaps against that corner. CB % of D tgts = how many of the defense's targets that corner was the man in coverage on (from PFR via nflverse), a reminder that one corner rarely covers anyone all game. CB EPA/tgt in scheme = the corner's FTN 2026 EPA allowed per target in man and in zone, weighted by how often his defense plays each (Sharp); higher = easier for the receiver. Pick a team above to filter. Source: Edgehalla.</p>
+      <p class="mm-note">Each receiver's likely corner, from where he lines up (left, right or slot) and the corner the defense lists there. It's not shadow coverage, so treat it as a tiebreaker. Green = favorable, red = tough. CB rank is out of 130 corners (1 = best). Proj effect = how much the coverage matchup and scheme move his receiving-yards projection (net). His total snaps = the receiver's projected snaps for the whole game (his share of plays over his last 3 games × his team's pace), not snaps against that corner. CB % of D tgts = how many of the defense's targets that corner was the man in coverage on (from PFR via nflverse), a reminder that one corner rarely covers anyone all game. CB EPA/tgt in scheme = the corner's FTN 2026 EPA allowed per target in man and in zone, weighted by how often his defense plays each (Sharp); higher = easier for the receiver. Pick a team above to filter. Source: Edgehalla.</p>
       <div class="mm-scroll">
         <table class="mm-table" id="dvp-cb-table" data-source="pl_cb" data-row-key="id">
           <thead><tr data-draw="dvp_cb_head" data-source="pl_cb"></tr></thead>
@@ -1328,7 +1333,7 @@ dash.draw('dvp_chart', function dvpChart(el) { if (MM.later(el, dvpChart)) retur
 /* ---------- WR vs CB (Edgehalla) ---------- */
 const MMCB = (() => {
   const MO = { Favorable: 0, Neutral: 1, Tough: 2 };
-  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, snaps_proj: (r) => r.snaps_proj ?? -1, cb1_sch_epa: (r) => r.cb1_sch_epa ?? -9, cb1_tshare: (r) => r.cb1_tshare ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
+  const KEYS = { player: (r) => r.player, team: (r) => r.team, align: (r) => r.align, cb1: (r) => r.cb1, cb1_tgt: (r) => r.cb1_tgt ?? -1, snaps_proj: (r) => r.snaps_proj ?? -1, eff_tot_yds: (r) => r.eff_tot_yds ?? -9, cb1_sch_epa: (r) => r.cb1_sch_epa ?? -9, cb1_tshare: (r) => r.cb1_tshare ?? -1, cb1_rtg: (r) => r.cb1_rtg ?? -1, cb1_rank: (r) => r.cb1_rank ?? 999, matchup: (r) => MO[r.matchup] * 1000 - (r.cb1_rank ?? 0) };
   const TXT = new Set(['player', 'team', 'align', 'cb1']);
   const state = () => {
     const L = MM.ok('pl_cb'); if (!L) return null; const p = dash.params();
@@ -1353,7 +1358,7 @@ dash.draw('dvp_cb_head', (tr) => {
   const s = MMCB.state(); tr.replaceChildren(); if (!s) return;
   MMCB.th(tr, s, 'Receiver', '', 'player'); MMCB.th(tr, s, 'Matchup', '', 'matchup'); MMCB.th(tr, s, 'Team', 'mm-hide-sm', 'team'); tr.appendChild(Object.assign(document.createElement('th'), { textContent: 'vs' }));
   MMCB.th(tr, s, 'Lines up', 'mm-hide-sm', 'align'); MMCB.th(tr, s, 'Likely corner', '', 'cb1');
-  MMCB.th(tr, s, 'His total snaps', 'num', 'snaps_proj'); MMCB.th(tr, s, 'CB % of D tgts', 'num mm-hide-sm', 'cb1_tshare'); MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB EPA/tgt in scheme', 'num mm-hide-sm', 'cb1_sch_epa'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
+  MMCB.th(tr, s, 'Proj effect (yds)', 'num', 'eff_tot_yds'); MMCB.th(tr, s, 'His total snaps', 'num', 'snaps_proj'); MMCB.th(tr, s, 'CB % of D tgts', 'num mm-hide-sm', 'cb1_tshare'); MMCB.th(tr, s, 'CB tgt', 'num mm-hide-sm', 'cb1_tgt'); MMCB.th(tr, s, 'Rtg allowed', 'num', 'cb1_rtg'); MMCB.th(tr, s, 'CB EPA/tgt in scheme', 'num mm-hide-sm', 'cb1_sch_epa'); MMCB.th(tr, s, 'CB rank', 'num', 'cb1_rank');
 });
 dash.draw('dvp_cb_rows', (tb) => {
   const s = MMCB.state(); tb.replaceChildren(); if (!s) return;
@@ -1365,6 +1370,7 @@ dash.draw('dvp_cb_rows', (tb) => {
     MMD.teamCell(tr, r.team); if (tr.lastElementChild) tr.lastElementChild.classList.add('mm-hide-sm'); MMD.teamCell(tr, r.opp);
     MM.cell(tr, r.align + (r.proxy ? '*' : ''), 'mm-hide-sm');
     const c = MM.cell(tr, r.cb1 + (r.cb2 ? ` / ${r.cb2}` : '')); const sm = document.createElement('small'); sm.textContent = MMCB.SIDE[r.cb1_side] || ''; c.appendChild(sm);
+    { const v = r.eff_tot_yds; MM.cell(tr, v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(1)}%`, 'num ' + (v >= 0.01 ? 'mm-tier-soft' : v != null && v <= -0.01 ? 'mm-tier-tough' : '')); }
     MM.cell(tr, r.snaps_proj != null ? String(r.snaps_proj) : '—', 'num'); MM.cell(tr, r.cb1_tshare != null ? Math.round(r.cb1_tshare * 100) + '%' : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_tgt != null ? String(r.cb1_tgt) : '—', 'num mm-hide-sm');
     MM.cell(tr, r.cb1_rtg != null ? String(r.cb1_rtg) : '—', 'num ' + (r.cb1_rtg >= 105 ? 'mm-tier-soft' : r.cb1_rtg != null && r.cb1_rtg <= 75 ? 'mm-tier-tough' : ''));
@@ -2301,8 +2307,19 @@ dash.draw('pl_profile', (el) => {
         c.appendChild(sn);
         c.appendChild(h('p', 'mm-note cv-exp', `${x.opp} plays man ${Math.round(CB.opp_man)}% of the time. On the other ~${Math.max(0, CB.across - (CB.man_snaps || 0))} snaps where ${cbn} lines up over him, ${x.opp} is in zone, so ${cbn} covers an area, not ${me}. The rest of ${me}'s snaps come from other alignments or when ${cbn} is off the field. These are estimates from alignment and snap rates, not tracked assignments.`));
       }
+      // projection effect (rec yds): coverage matchup factor x scheme factor, from the engine
+      if (CB.eff_tot_yds != null) {
+        const pf = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(1)}%`;
+        const cl = (v) => (v >= 0.01 ? 'mm-tier-soft' : v <= -0.01 ? 'mm-tier-tough' : '');
+        c.appendChild(h('div', 'cv-h', 'Effect on his receiving-yards projection'));
+        const ef = h('div', 'cv-eff');
+        const chip = (l, v) => { const d = h('div', 'cv-e'); d.append(h('span', '', l), h('b', cl(v), pf(v))); ef.appendChild(d); };
+        chip('Coverage', CB.eff_cov_yds); chip('Scheme', CB.eff_sch_yds); chip('Net', CB.eff_tot_yds);
+        c.appendChild(ef);
+        if (CB.proj_yds != null) c.appendChild(h('p', 'mm-note cv-exp', `${CB.proj_yds_base} → ${CB.proj_yds} receiving yards${CB.proj_rec != null ? ` (receptions ${CB.proj_rec_base} → ${CB.proj_rec}, ${pf(CB.eff_tot_rec)})` : ''}. Coverage = the defenders likely to cover him, graded on yards allowed, FTN EPA in their scheme and separation allowed. Scheme = man/zone fit, alignment, pressure and explosives. The coverage effect weighs every defender likely to cover him by snaps and alignment, not just ${cbn}, so it can point a different way than the tag.`));
+      }
       // why the tag
-      const ws = [1, 2, 3, 4, 5].map((i) => [CB['cbw' + i], CB['cbt' + i]]).filter((w) => w[0]);
+      const ws = [1, 2, 3, 4, 5, 6].map((i) => [CB['cbw' + i], CB['cbt' + i]]).filter((w) => w[0]);
       if (ws.length) {
         c.appendChild(h('div', 'cv-h', `Why it's ${CB.matchup.toLowerCase()}`));
         const ul = h('ul', 'cv-why'); ws.forEach(([t, tone]) => ul.appendChild(h('li', 'tone-' + tone, t))); c.appendChild(ul);
