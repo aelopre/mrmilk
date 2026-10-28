@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027192905', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027194946', IDS = ["book_board", "dvp", "dvp_team", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -330,6 +330,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pk-r .v { font-family: var(--mm-display); font-size: 20px; line-height: 1; text-align: right; min-width: 2.2em; }
 .mm-live-end { margin: 0; padding: 10px 14px; border-radius: 8px; background: rgba(255,190,46,.10); border-left: 3px solid var(--mm-gold); font-size: 17px; }
 .mm-live-end b { color: var(--mm-gold); }
+.mm-view { display: block; width: 100%; border-radius: 8px; background: #070B18; box-shadow: inset 0 0 0 1px var(--mm-line); }
 @media (max-width: 480px) { .mm-sb-team { padding: 4px 10px; gap: 4px; } .mm-sb-name { font-size: 20px; gap: 5px; } .mm-sb-score { font-size: 34px; } .mm-sb-team.away { padding-left: 16px; } .mm-sb-team.home { padding-right: 16px; } .mm-sb-mid { min-width: 0; padding: 6px 8px; } .mm-sb-dd { font-size: 11px; } .mm-sb-clock { font-size: 24px; } .mm-btn { font-size: 18px; padding: 7px 12px 5px; } }
 
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
@@ -1256,6 +1257,171 @@ dash.draw('dvp_scout', (el) => {
 });
 </script>
 <script>
+/* 2.5D broadcast view: a tilted field drawn in perspective on a canvas, 22 players, the ball, and a camera that follows it. */
+window.MMV = (() => {
+  const COL = { CAR: { body: '#0085CA', trim: '#FFFFFF', num: '#FFFFFF' }, GB: { body: '#1E4D3A', trim: '#FFB81C', num: '#FFB81C' } };
+  const C = 26.65;                                   // field center (yards across)
+  const lerp = (a, b, u) => a + (b - a) * u, cl = (u) => Math.max(0, Math.min(1, u)), ease = (u) => { u = cl(u); return u * u * (3 - 2 * u); };
+  const goalX = (t) => (t === 'CAR' ? 10 : 110);       // a team's own goal line (absolute x, 0..120 incl. end zones)
+  // offense / defense alignments relative to the line of scrimmage: [dx behind(-)/ahead(+) in attack direction, y]
+  const OFF = { OL: [[-0.8, C - 3.2], [-0.8, C - 1.6], [-0.8, C], [-0.8, C + 1.6], [-0.8, C + 3.2]], QB: [-4.5, C], RB: [-7, C - 1], TE: [-1, C + 5.2], WR: [[-1, C - 19], [-1, C + 18], [-1.5, C - 11]] };
+  const DEF = { DL: [[1, C - 2.5], [1, C - 0.8], [1, C + 0.8], [1, C + 2.5]], LB: [[5, C - 4], [5, C], [5, C + 4]], CB: [[6, C - 19], [6, C + 18]], S: [[12, C - 8], [12, C + 8]] };
+  function create(canvas) {
+    const V = { cv: canvas, ctx: canvas.getContext('2d'), camX: 60, ents: [], ball: { x: 60, y: C, z: 0.3 }, los: 60, fd: 70, off: 'CAR', anim: null, flash: 0, W: 0, H: 0 };
+    V.resize = () => { const d = Math.min(window.devicePixelRatio || 1, 2); const w = canvas.clientWidth || 360; const h = Math.round(Math.max(190, Math.min(340, w * 0.52))); canvas.style.height = h + 'px'; canvas.width = Math.round(w * d); canvas.height = Math.round(h * d); V.W = w; V.H = h; V.d = d; };
+    V.resize();
+    return V;
+  }
+  // camera: ground point (x along field, y across, z height) -> screen. Sideline camera, raised, looking across the field.
+  function proj(V, x, y, z) {
+    const W = V.W, H = V.H, span = W < 520 ? 32 : 46;            // yards visible across the screen at mid-field depth
+    const camD = 75, F = (W / span) * (camD + C);
+    const A = (0.78 * H) / (F * (1 / camD - 1 / (camD + 53.3)));  // fits near sideline at 92% of height, far sideline at 14%
+    const k = F / (camD + y), hz = 0.92 * H - A * F / camD;
+    return { x: W / 2 + (x - V.camX) * k, y: hz + A * k - (z || 0) * k * 0.9, k };
+  }
+  function setFormation(V, off, losX, fdX) {
+    const d = off === 'CAR' ? 1 : -1, de = off === 'CAR' ? 'GB' : 'CAR', e = [];
+    const add = (team, role, dx, y) => e.push({ team, role, x: losX + d * dx, y, x0: losX + d * dx, y0: y, tx: null, ty: null, down: 0 });
+    OFF.OL.forEach(([dx, y]) => add(off, 'OL', dx, y)); add(off, 'QB', OFF.QB[0], OFF.QB[1]); add(off, 'RB', OFF.RB[0], OFF.RB[1]); add(off, 'TE', OFF.TE[0], OFF.TE[1]);
+    OFF.WR.forEach(([dx, y]) => add(off, 'WR', dx, y));
+    DEF.DL.forEach(([dx, y]) => add(de, 'DL', dx, y)); DEF.LB.forEach(([dx, y]) => add(de, 'LB', dx, y)); DEF.CB.forEach(([dx, y]) => add(de, 'CB', dx, y)); DEF.S.forEach(([dx, y]) => add(de, 'S', dx, y));
+    V.ents = e; V.off = off; V.dir = d; V.los = losX; V.fd = fdX; V.anim = null; V.ball = { x: losX, y: C, z: 0.3 }; V.carrier = null;
+  }
+  const find = (V, role, i) => V.ents.filter((p) => p.role === role)[i || 0];
+  const nearest = (V, team, x, y, n) => V.ents.filter((p) => p.team === team).map((p) => [Math.hypot(p.x0 - x, p.y0 - y), p]).sort((a, b) => a[0] - b[0]).slice(0, n).map((a) => a[1]);
+  // build keyframed paths for one play. kind: run|pass|inc|int|sack|punt|fg|kick|kneel|none
+  function planPlay(V, P) {
+    const d = V.dir, x0 = V.los, off = V.off, de = off === 'CAR' ? 'GB' : 'CAR';
+    V.ents.forEach((p) => { p.path = [[0, p.x0, p.y0], [1, p.x0 + (p.team === off ? d : -d) * 0.6, p.y0]]; p.down = 0; p.downAt = 2; });
+    const bpath = []; let carrier = null;
+    const qb = find(V, 'QB'), rb = find(V, 'RB');
+    const recvs = V.ents.filter((p) => p.team === off && (p.role === 'WR' || p.role === 'TE'));
+    const wrs = recvs.filter((r) => r.role === 'WR'), te = recvs.find((r) => r.role === 'TE');
+    const lane = () => (P.whoPos === 'RB' ? rb : P.whoPos === 'TE' ? te : wrs[Math.abs(hash(P.who || '')) % wrs.length]);
+    const g = P.gain, endX = x0 + d * g;
+    const goalLine = off === 'CAR' ? 110 : 10;
+    const routeAll = (depth) => recvs.forEach((r, i) => { r.path = [[0, r.x0, r.y0], [0.25, r.x0 + d * 3, r.y0], [0.75, r.x0 + d * depth * (0.6 + 0.2 * i), lerp(r.y0, C, 0.25)], [1, r.x0 + d * depth * (0.7 + 0.2 * i), lerp(r.y0, C, 0.3)]]; });
+    const converge = (tx, ty, at, n) => nearest(V, de, tx, ty, n).forEach((p, i) => { const ox = (i - 1) * 0.9; p.path = [[0, p.x0, p.y0], [at * 0.6, lerp(p.x0, tx, 0.55), lerp(p.y0, ty, 0.55)], [at, tx + d * 0.6 + ox * 0.3, ty + ox], [1, tx + d * 0.4 + ox * 0.3, ty + ox]]; if (i === 0) { p.downAt = at + 0.04; } });
+    const olPush = () => V.ents.filter((p) => p.role === 'OL' || p.role === 'DL').forEach((p) => { p.path = [[0, p.x0, p.y0], [0.4, p.x0 + d * (p.team === off ? 0.9 : 0.2), p.y0], [1, p.x0 + d * 1.3, p.y0]]; });
+    if (P.kind === 'run' || P.kind === 'scramble') {
+      olPush(); routeAll(5);
+      carrier = P.kind === 'scramble' ? qb : rb;
+      const side = P.sub === 'left' ? -1 : P.sub === 'right' ? 1 : 0, gy = C + side * 3.5 * d;
+      if (P.kind === 'scramble') carrier.path = [[0, qb.x0, qb.y0], [0.25, qb.x0 - d * 1.5, qb.y0], [0.45, x0 - d * 1, C + 4], [0.9, endX, C + 4 + Math.sign(g) * 2], [1, endX + d * 0.3, C + 5]];
+      else { qb.path = [[0, qb.x0, qb.y0], [0.18, qb.x0 - d * 1.2, qb.y0 - 0.8], [1, qb.x0 - d * 1.5, qb.y0 - 1]]; carrier.path = [[0, rb.x0, rb.y0], [0.18, qb.x0 - d * 1.2, qb.y0 - 0.3], [0.38, x0, gy], [0.9, endX, gy + side * 2], [1, endX + d * 0.4, gy + side * 2]]; }
+      bpath.push([0, x0, C, 0.3], [0.08, qb.x0, qb.y0, 1.1]);
+      if (P.kind !== 'scramble') bpath.push([0.18, qb.x0 - d * 1.2, qb.y0 - 0.3, 1.0]);
+      if (!P.td) converge(endX, carrier.path[carrier.path.length - 2][2], 0.9, 3);
+      carrier.carry = true; carrier.fromU = P.kind === 'scramble' ? 0.08 : 0.18;
+    } else if (P.kind === 'pass' || P.kind === 'inc' || P.kind === 'int') {
+      routeAll(14);
+      const tg = lane(), ay = Math.max(1, P.ay), cx = x0 + d * ay, cy = lerp(tg.y0, C, 0.3);
+      qb.path = [[0, qb.x0, qb.y0], [0.28, qb.x0 - d * 2.5, qb.y0], [1, qb.x0 - d * 2.5, qb.y0]];
+      const tCatch = 0.32 + 0.22 * Math.min(1, ay / 30);
+      tg.path = [[0, tg.x0, tg.y0], [tCatch, cx, cy]];
+      const yac = P.kind === 'pass' ? g - ay : 0, ex = cx + d * yac;
+      if (P.kind === 'pass') tg.path.push([0.9, ex, cy + (cy > C ? 1.5 : -1.5)], [1, ex + d * 0.3, cy + (cy > C ? 1.7 : -1.7)]);
+      else tg.path.push([1, cx + d * 1.5, cy]);
+      bpath.push([0, x0, C, 0.3], [0.08, qb.x0, qb.y0, 1.1], [0.28, qb.x0 - d * 2.5, qb.y0, 1.9], [tCatch, cx, cy, 1.2, 2.5 + ay * 0.12]);
+      olPush();
+      const db = nearest(V, de, cx, cy, 1)[0];
+      if (P.kind === 'int') { db.path = [[0, db.x0, db.y0], [tCatch, cx + d * 0.3, cy], [1, cx - d * 9, cy + 2]]; carrier = db; carrier.carry = true; carrier.fromU = tCatch; tg.downAt = 2; }
+      else if (P.kind === 'inc') { db.path = [[0, db.x0, db.y0], [tCatch, cx + d * 0.6, cy + 0.6], [1, cx + d * 1.4, cy + 0.6]]; bpath.push([Math.min(1, tCatch + 0.15), cx + d * 3, cy + 1, 0]); }
+      else { carrier = tg; carrier.carry = true; carrier.fromU = tCatch; if (!P.td) converge(ex, cy, 0.9, 2); }
+      // QB holds the ball until he throws
+      qb.carry = true; qb.toU = 0.28;
+    } else if (P.kind === 'sack') {
+      olPush(); routeAll(10);
+      const sx = x0 + d * g; qb.path = [[0, qb.x0, qb.y0], [0.3, qb.x0 - d * 2.5, qb.y0], [0.62, sx, qb.y0 + 0.5], [1, sx, qb.y0 + 0.5]];
+      V.ents.filter((p) => p.role === 'DL').forEach((p, i) => { p.path = [[0, p.x0, p.y0], [0.62, sx + d * 0.7, qb.y0 + (i - 1.5) * 0.8], [1, sx + d * 0.5, qb.y0 + (i - 1.5) * 0.8]]; });
+      qb.downAt = 0.64; carrier = qb; carrier.carry = true; carrier.fromU = 0.08; bpath.push([0, x0, C, 0.3], [0.08, qb.x0, qb.y0, 1.1]);
+    } else if (P.kind === 'punt' || P.kind === 'fg') {
+      const kx = x0 - d * (P.kind === 'punt' ? 14 : 7);
+      const k = find(V, 'QB'); k.path = [[0, kx, C], [1, kx + d * 0.5, C]];
+      const land = P.kind === 'punt' ? x0 + d * P.net : (off === 'CAR' ? 120 : 0) + (P.good ? 0 : 0), ly = P.kind === 'fg' && !P.good ? C + 5 : C;
+      bpath.push([0, x0, C, 0.3], [0.2, kx, C, 0.8], [0.85, land, ly, P.kind === 'fg' ? 4 : 0.5, P.kind === 'punt' ? 22 : 9]);
+      V.ents.filter((p) => p.team === off && p.role !== 'QB').forEach((p) => { p.path = [[0, p.x0, p.y0], [1, p.x0 + d * (P.kind === 'punt' ? 22 : 1), lerp(p.y0, C, 0.4)]]; });
+      V.ents.filter((p) => p.team === de).forEach((p) => { p.path = [[0, p.x0, p.y0], [1, p.x0 + (P.kind === 'punt' ? d * 18 : -d * 0.5), p.y0]]; });
+    } else if (P.kind === 'kick') {
+      bpath.push([0, P.kx, C, 0.3], [0.85, P.land, C, 0.6, 20]);
+    } else if (P.kind === 'kneel') {
+      qb.path = [[0, qb.x0, qb.y0], [0.3, qb.x0 - d * 0.8, qb.y0], [1, qb.x0 - d * 0.8, qb.y0]]; qb.downAt = 0.35; carrier = qb; carrier.carry = true; carrier.fromU = 0.08; bpath.push([0, x0, C, 0.3], [0.08, qb.x0, qb.y0, 1.0]);
+    } else {
+      bpath.push([0, x0, C, 0.3], [1, x0, C, 0.3]);
+    }
+    if (carrier && !P.td && P.kind !== 'int') carrier.downAt = Math.min(carrier.downAt, 0.93);
+    V.anim = { bpath, carrier, u: 0, td: P.td };
+  }
+  function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
+  function along(path, u) {
+    if (u <= path[0][0]) return path[0];
+    for (let i = 1; i < path.length; i++) if (u <= path[i][0]) { const a = path[i - 1], b = path[i], t = ease((u - a[0]) / (b[0] - a[0] || 1)); return [u, lerp(a[1], b[1], t), lerp(a[2], b[2], t), a[3] != null ? lerp(a[3], b[3], t) : 0, b[4] || 0, t]; }
+    return path[path.length - 1];
+  }
+  function tick(V, u) {
+    const A = V.anim; if (!A) return; A.u = u;
+    V.ents.forEach((p) => { if (p.path) { const q = along(p.path, u); p.x = q[1]; p.y = q[2]; } p.down = u >= p.downAt ? 1 : 0; });
+    // ball: follows its own flight path until handed to a carrier, then rides with him
+    const bp = A.bpath; let b = null;
+    if (bp.length) {
+      const lastT = bp[bp.length - 1][0];
+      if (u <= lastT || !A.carrier) {
+        const q = along(bp, Math.min(u, lastT)); let z = q[3];
+        if (q[4]) z += Math.sin(Math.PI * q[5]) * q[4];       // arc height for throws and kicks
+        b = { x: q[1], y: q[2], z };
+      }
+    }
+    if (A.carrier && u >= (A.carrier.fromU || 0) && (!b || u > bp[bp.length - 1][0] || A.carrier.fromU >= bp[bp.length - 1][0])) b = { x: A.carrier.x + V.dir * 0.3, y: A.carrier.y, z: A.carrier.down ? 0.25 : 1.1 };
+    if (b) V.ball = b;
+  }
+  function draw(V) {
+    const g = V.ctx, W = V.W, H = V.H; g.setTransform(V.d, 0, 0, V.d, 0, 0);
+    // camera eases toward the ball
+    V.camX += (Math.max(W < 520 ? 14 : 20, Math.min(W < 520 ? 106 : 100, V.ball.x)) - V.camX) * 0.12;
+    const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#0B1430'); sky.addColorStop(1, '#070B18'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    const quad = (x1, x2, y1, y2, fill) => { const a = proj(V, x1, y1), b = proj(V, x2, y1), c = proj(V, x2, y2), e = proj(V, x1, y2); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(c.x, c.y); g.lineTo(e.x, e.y); g.closePath(); g.fillStyle = fill; g.fill(); };
+    quad(-12, 132, -6, 60, '#174A28');
+    for (let i = 0; i < 20; i++) quad(10 + i * 5, 15 + i * 5, 0, 53.3, i % 2 ? '#2A7A36' : '#2F8540');
+    quad(0, 10, 0, 53.3, '#0A4E86'); quad(110, 120, 0, 53.3, '#1E4D3A');
+    const line = (x1, y1, x2, y2, col, w) => { const a = proj(V, x1, y1), b = proj(V, x2, y2); g.strokeStyle = col; g.lineWidth = Math.max(0.6, w * a.k * 0.022); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); };
+    for (let x = 10; x <= 110; x += 5) line(x, 0, x, 53.3, 'rgba(255,255,255,.75)', x % 10 === 0 ? 4 : 2.5);
+    line(0, 0, 120, 0, '#fff', 5); line(0, 53.3, 120, 53.3, '#fff', 5); line(0, 0, 0, 53.3, '#fff', 4); line(120, 0, 120, 53.3, '#fff', 4);
+    // yard numbers on the near side
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let x = 20; x <= 100; x += 10) { const p = proj(V, x, 8); const n = x <= 60 ? x - 10 : 110 - x; g.font = `400 ${Math.max(8, p.k * 1.7)}px 'MM Bebas', Impact, sans-serif`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(String(n), p.x, p.y); }
+    // end zone names
+    [['CAR', 5, '#FFFFFF'], ['GB', 115, '#FFB81C']].forEach(([t, x, c]) => { const p = proj(V, x, 26.65); g.font = `400 ${Math.max(10, p.k * 3.2)}px 'MM Bebas', Impact, sans-serif`; g.fillStyle = c; g.globalAlpha = 0.85; g.fillText(t, p.x, p.y); g.globalAlpha = 1; });
+    // line of scrimmage + first down
+    line(V.los, 0, V.los, 53.3, 'rgba(80,150,255,.95)', 5);
+    if (V.fd != null && V.fd > 0 && V.fd < 120) line(V.fd, 0, V.fd, 53.3, '#FFD43B', 5);
+    // goal posts
+    [0, 120].forEach((x) => { const a = proj(V, x, 26.65 - 3.1, 10), b = proj(V, x, 26.65 + 3.1, 10), base = proj(V, x, 26.65, 0), mid = proj(V, x, 26.65, 10), tA = proj(V, x, 23.55, 21), tB = proj(V, x, 29.75, 21);
+      g.strokeStyle = '#FFD43B'; g.lineWidth = Math.max(1.5, base.k * 0.12); g.beginPath(); g.moveTo(base.x, base.y); g.lineTo(mid.x, mid.y); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.moveTo(a.x, a.y); g.lineTo(tA.x, tA.y); g.moveTo(b.x, b.y); g.lineTo(tB.x, tB.y); g.stroke(); });
+    // players, far to near
+    const ps = V.ents.slice().sort((a, b) => b.y - a.y);
+    const ballDepth = V.ball.y; let ballDrawn = false;
+    const drawBall = () => { const b = V.ball, s = proj(V, b.x, b.y, 0), p = proj(V, b.x, b.y, b.z); const r = Math.max(2, p.k * 0.22);
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(s.x, s.y, r * 1.1, r * 0.4, 0, 0, 7); g.fill();
+      g.fillStyle = '#8A5532'; g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.ellipse(p.x, p.y, r * 1.25, r * 0.8, -0.4, 0, 7); g.fill(); g.stroke();
+      if (V.anim && V.anim.td && V.anim.u > 0.85) { g.strokeStyle = 'rgba(255,190,46,.9)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, r * 3, 0, 7); g.stroke(); } ballDrawn = true; };
+    ps.forEach((p) => {
+      if (!ballDrawn && p.y < ballDepth) drawBall();
+      const s = proj(V, p.x, p.y, 0), c = COL[p.team], r = Math.max(2.5, s.k * 0.4), hgt = p.down ? r * 0.9 : s.k * 1.75;
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(s.x, s.y, r * 1.3, r * 0.45, 0, 0, 7); g.fill();
+      if (p.down) { g.fillStyle = c.body; g.beginPath(); g.ellipse(s.x, s.y - r * 0.5, r * 1.5, r * 0.6, 0, 0, 7); g.fill(); g.strokeStyle = c.trim; g.lineWidth = 1; g.stroke(); return; }
+      g.fillStyle = c.body; g.beginPath(); g.moveTo(s.x - r * 0.8, s.y); g.lineTo(s.x - r * 0.95, s.y - hgt * 0.75); g.quadraticCurveTo(s.x, s.y - hgt * 0.95, s.x + r * 0.95, s.y - hgt * 0.75); g.lineTo(s.x + r * 0.8, s.y); g.closePath(); g.fill();
+      g.strokeStyle = c.trim; g.lineWidth = Math.max(1, r * 0.18); g.beginPath(); g.moveTo(s.x - r * 0.9, s.y - hgt * 0.55); g.lineTo(s.x + r * 0.9, s.y - hgt * 0.55); g.stroke();
+      g.fillStyle = c.trim; g.beginPath(); g.arc(s.x, s.y - hgt - r * 0.15, r * 0.62, 0, 7); g.fill();             // helmet
+      if (V.anim && V.anim.carrier === p && !p.down) { g.strokeStyle = '#FFBE2E'; g.lineWidth = 2; g.beginPath(); g.ellipse(s.x, s.y, r * 1.8, r * 0.7, 0, 0, 7); g.stroke(); }
+    });
+    if (!ballDrawn) drawBall();
+    if (V.flash > 0) { g.fillStyle = `rgba(255,190,46,${V.flash * 0.25})`; g.fillRect(0, 0, W, H); V.flash = Math.max(0, V.flash - 0.03); }
+  }
+  return { create, setFormation, planPlay, tick, draw, goalX };
+})();
+</script>
+<script>
 /* ---------- live sim player: replays one of 500 pre-simulated games, play by play ---------- */
 (() => {
   const NM = { CAR: 'Panthers', GB: 'Packers' };
@@ -1291,9 +1457,7 @@ dash.draw('dvp_scout', (el) => {
     [r.away, r.as] = tm('away', 'CAR'); [r.home, r.hs] = tm('home', 'GB');
     const mid = h('div', 'mm-sb-mid'); r.clock = h('span', 'mm-sb-clock', 'Q1 15:00'); r.dd = h('span', 'mm-sb-dd', 'Kickoff'); mid.append(r.clock, r.dd);
     sb.append(r.away, mid, r.home);
-    const f = h('div', 'mm-field'); f.setAttribute('aria-hidden', 'true');
-    f.append(h('div', 'ez a', 'CAR'), h('div', 'ez h', 'GB'), h('div', 'lines'));
-    r.los = h('div', 'mark los'); r.fd = h('div', 'mark fd'); r.ball = h('div', 'ball'); f.append(r.los, r.fd, r.ball);
+    const f = h('canvas', 'mm-view'); f.setAttribute('role', 'img'); f.setAttribute('aria-label', 'Animated field view of the current play'); r.cv = f;
     const play = h('div', 'mm-play'); r.now = h('p', 'mm-play-now'); r.now.setAttribute('aria-live', 'polite'); r.feed = h('ul', 'mm-feed'); play.append(r.now, r.feed);
     r.prog = h('div', 'mm-prog'); r.progI = h('i'); r.prog.appendChild(r.progI);
     const ctl = h('div', 'mm-ctl');
@@ -1330,15 +1494,6 @@ dash.draw('dvp_scout', (el) => {
       const type = L.types[p[1]];
       r.dd.textContent = type === 'kickoff' ? 'Kickoff' : `${ORD[p[6]] || ''} & ${p[7] >= yl ? 'Goal' : p[7]} · ${spot}`;
       r.away.classList.toggle('has', p[0] === 0); r.home.classList.toggle('has', p[0] === 1);
-      // field: CAR goal on the left (x=0), GB goal on the right (x=100)
-      const X = (yd) => `${((10 + yd) / 120) * 100}%`;
-      const fromLeft = (off === 'CAR') ? (100 - yl) : yl;
-      const fdYl = Math.max(0, yl - p[7]); const fdLeft = (off === 'CAR') ? (100 - fdYl) : fdYl;
-      r.los.style.left = X(fromLeft); r.fd.style.left = X(fdLeft); r.fd.style.display = type === 'kickoff' ? 'none' : '';
-      let bx = fromLeft;
-      if (st.phase === 'post') { const gn = L.types[p[1]] === 'pass' || L.types[p[1]] === 'run' || L.types[p[1]] === 'sack' ? p[8] : 0; bx = off === 'CAR' ? fromLeft + gn : fromLeft - gn; }
-      r.ball.style.left = X(Math.max(-8, Math.min(108, bx)));
-      r.ball.classList.toggle('td', st.phase === 'post' && !!(p[11] & 1));
     }
     r.progI.style.width = `${(g.final ? 1 : g.i / g.G.plays.length) * 100}%`;
     // play text + feed
@@ -1400,22 +1555,63 @@ dash.draw('dvp_scout', (el) => {
     const [s, cls] = playText(L, g, p); const [q, c] = fmtClock(p[3]);
     if (L.types[p[1]] !== 'kickoff' || g.i > 0) g.feed.unshift([s, cls, `Q${q} ${c}`]);
   }
-  const DUR = { pre: 420, post: 760 };
+  function playDesc(L, p) {
+    const type = L.types[p[1]], sub = L.subs[p[2]], who = p[9] >= 0 ? L.players[p[9]] : null, whoPos = p[9] >= 0 ? L.pos[p[9]] : null;
+    const base = { gain: p[8], who, whoPos, ay: p[15] || 0, td: !!(p[11] & 1), sub, net: p[10], good: !!(p[11] & 4) };
+    if (type === 'pass') return { ...base, kind: sub === 'inc' ? 'inc' : sub === 'int' ? 'int' : 'pass' };
+    if (type === 'run') return { ...base, kind: sub === 'scramble' ? 'scramble' : 'run' };
+    if (type === 'penalty' && sub === 'dpi') return { ...base, kind: 'inc', ay: p[8] };
+    if (type === 'sack') return { ...base, kind: 'sack' };
+    if (type === 'punt') return { ...base, kind: 'punt' };
+    if (type === 'fg') return { ...base, kind: 'fg' };
+    if (type === 'kneel') return { ...base, kind: 'kneel' };
+    if (type === 'kickoff') return { ...base, kind: 'kick' };
+    return { ...base, kind: 'none' };
+  }
+  const absX = (team, yl) => (team === 'CAR' ? 10 + (100 - yl) : 10 + yl);
+  function stage(st) {   // put both teams in formation for play g.i
+    const L = st.L, g = st.g, p = g.G.plays[Math.min(g.i, g.G.plays.length - 1)], off = p[0] ? 'GB' : 'CAR', yl = p[5];
+    const los = absX(off, yl), fd = L.types[p[1]] === 'kickoff' ? null : absX(off, Math.max(0, yl - p[7]));
+    if (st.V) { MMV.setFormation(st.V, off, los, fd); if (L.types[p[1]] === 'kickoff') { st.V.ball = { x: absX(off, 35) + (off === 'CAR' ? 30 : -30), y: 26.65, z: 0.3 }; } }
+  }
+  const DUR = { pre: 450, anim: 1300, post: 650 };
+  function animDur(st, P) { return (P.kind === 'none' ? 450 : P.kind === 'punt' || P.kind === 'kick' || P.kind === 'fg' ? 1500 : P.kind === 'pass' || P.kind === 'inc' || P.kind === 'int' ? 1450 : 1200) / st.speed; }
   function step(st) {
     clearTimeout(st.timer); if (!st.playing) return;
     const sec = document.getElementById('sims');
     if (document.hidden || (sec && sec.hidden)) { st.playing = false; render(st); return; }
     const g = st.g;
-    if (st.phase === 'pre') { st.phase = 'post'; applyPlay(st); render(st);
+    if (st.phase === 'pre') {
+      st.phase = 'anim'; const p = g.G.plays[g.i]; const P = playDesc(st.L, p);
+      if (P.kind === 'kick') { const off = p[0] ? 'GB' : 'CAR', rx = absX(off, 35); P.kx = rx + (off === 'CAR' ? 30 : -30); P.land = off === 'CAR' ? 5 : 115; }
+      if (st.V) { MMV.planPlay(st.V, P); st.animT0 = performance.now(); st.animDur = animDur(st, P); }
+      kick(st); st.timer = setTimeout(() => step(st), animDur(st, P)); return;
+    }
+    if (st.phase === 'anim') {
+      st.phase = 'post'; applyPlay(st); render(st);
       const p = g.G.plays[g.i]; const big = (p[11] & 1) || st.L.subs[p[2]] === 'int' || st.L.subs[p[2]] === 'fumble' || st.L.types[p[1]] === 'fg';
-      st.timer = setTimeout(() => step(st), (DUR.post + (big ? 900 : 0)) / st.speed); return; }
+      if ((p[11] & 1) && st.V) st.V.flash = 1;
+      st.timer = setTimeout(() => step(st), (DUR.post + (big ? 900 : 0)) / st.speed); return;
+    }
     g.i += 1;
-    if (g.i >= g.G.plays.length) { g.final = true; g.i = g.G.plays.length; st.playing = false; render(st); return; }
-    st.phase = 'pre'; render(st); st.timer = setTimeout(() => step(st), DUR.pre / st.speed);
+    if (g.i >= g.G.plays.length) { g.final = true; g.i = g.G.plays.length; st.playing = false; render(st); kick(st); return; }
+    st.phase = 'pre'; stage(st); render(st); kick(st); st.timer = setTimeout(() => step(st), DUR.pre / st.speed);
+  }
+  // draw loop: runs while playing (and briefly after a change), so an idle player costs nothing
+  function kick(st) { st.until = performance.now() + 1500; if (!st.raf) st.raf = requestAnimationFrame((t) => frame(st, t)); }
+  function frame(st, t) {
+    st.raf = 0; if (!st.V) return;
+    const sec = document.getElementById('sims'); const vis = !document.hidden && !(sec && sec.hidden);
+    if (vis) {
+      if (st.V.cv.clientWidth && Math.abs(st.V.cv.clientWidth - st.V.W) > 2) st.V.resize();
+      if (st.phase === 'anim' && st.V.anim) MMV.tick(st.V, Math.min(1, (t - st.animT0) / st.animDur));
+      MMV.draw(st.V);
+    }
+    if (vis && (st.playing || t < st.until)) st.raf = requestAnimationFrame((n) => frame(st, n));
   }
   function newGame(st, autoplay) {
     clearTimeout(st.timer); let gi; do { gi = Math.floor(Math.random() * st.L.games.length); } while (st.L.games.length > 1 && st.g && gi === st.g.gi);
-    st.g = makeGame(st.L, gi); st.phase = 'pre'; st.playing = !!autoplay; render(st); idLabel(st);
+    st.g = makeGame(st.L, gi); st.phase = 'pre'; st.playing = !!autoplay; stage(st); render(st); idLabel(st); kick(st);
     if (autoplay) st.timer = setTimeout(() => step(st), 500 / st.speed);
   }
   function idLabel(st) { document.querySelectorAll('.mm-live-id').forEach((e) => { e.textContent = st.g ? `Game ${st.g.gi + 1} of ${st.L.games.length}` : ''; }); }
@@ -1431,14 +1627,16 @@ dash.draw('dvp_scout', (el) => {
     } catch (e) { st.r.snd.textContent = '♪ Sound unavailable'; }
   }
   function init(el, st, L) {
-    st.L = L; st.speed = 1; st.r = build(el);
+    st.L = L; st.speed = 1; st.r = build(el); st.V = MMV.create(st.r.cv);
+    window.addEventListener('resize', () => { if (st.V) { st.V.resize(); kick(st); } });
     st.r.play.onclick = () => {
-      if (st.g.final) { st.g = makeGame(L, st.g.gi); st.phase = 'pre'; }
-      st.playing = !st.playing; render(st); if (st.playing) step(st); else clearTimeout(st.timer);
+      if (st.g.final) { st.g = makeGame(L, st.g.gi); st.phase = 'pre'; stage(st); }
+      st.playing = !st.playing; render(st); kick(st);
+      if (st.playing) { if (st.phase === 'anim') { st.phase = 'pre'; stage(st); } st.timer = setTimeout(() => step(st), 300 / st.speed); } else clearTimeout(st.timer);
     };
     st.r.speeds.forEach((b) => b.onclick = () => { st.speed = +b.dataset.v; st.r.speeds.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (st.playing) { clearTimeout(st.timer); st.timer = setTimeout(() => step(st), 150); } });
-    st.r.skip.onclick = () => { clearTimeout(st.timer); const g = st.g; if (st.phase === 'pre' && g.i < g.G.plays.length && !g.final) applyPlay(st);
-      for (g.i += 1; g.i < g.G.plays.length; g.i += 1) applyPlay(st); g.final = true; st.playing = false; render(st); };
+    st.r.skip.onclick = () => { clearTimeout(st.timer); const g = st.g; if ((st.phase === 'pre' || st.phase === 'anim') && g.i < g.G.plays.length && !g.final) applyPlay(st);
+      for (g.i += 1; g.i < g.G.plays.length; g.i += 1) applyPlay(st); g.final = true; st.playing = false; g.i = g.G.plays.length - 1; stage(st); g.i = g.G.plays.length; render(st); kick(st); };
     st.r.again.onclick = () => newGame(st, true);
     st.r.snd.onclick = () => sound(st);
     newGame(st, false);
@@ -1447,7 +1645,7 @@ dash.draw('dvp_scout', (el) => {
   dash.draw('live_player', {
     mount(el) { const st = {}; const L = lib(); if (L) init(el, st, L); return st; },
     update(el, st) { if (st.L) { if (st.g) idLabel(st); return; } const L = lib(); if (L) init(el, st, L); },
-    unmount(el, st) { clearTimeout(st.timer); try { st.src && st.src.stop(); st.ac && st.ac.close(); } catch (e) {} },
+    unmount(el, st) { clearTimeout(st.timer); cancelAnimationFrame(st.raf); try { st.src && st.src.stop(); st.ac && st.ac.close(); } catch (e) {} },
   });
 })();
 </script>
