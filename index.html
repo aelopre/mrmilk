@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028020845', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028022338', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -436,6 +436,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-props tbody tr { cursor: pointer; }
 .mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
+.mm-pf-grid > .mm-why { grid-column: 1 / -1; }
 .mm-pf-match { display: grid; gap: 8px; }
 .mm-pf-match .big { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .mm-pf-match .big b { font-family: var(--mm-display); font-weight: 400; font-size: 44px; line-height: 1; }
@@ -2181,17 +2182,6 @@ dash.draw('pl_profile', (el) => {
   const badge = MMP.jersey(x.team, R ? R.jersey : null, x.pos, 66); badge.classList.add('mm-pf-badge');
   const id = h('div', 'mm-pf-id'); const row = h('div', 'mm-pf-namerow'); row.append(badge, nm); id.append(row, sub);   // number sits on the name's line
   head.append(back, id, roles); el.appendChild(head);
-  // --- why this projection
-  const WY = (MM.ok('pl_why') || []).find((r) => r.player === x.player);
-  if (WY && !x.out && !x.bye) {
-    const wc = h('div', 'mm-card mm-why'); wc.appendChild(h('h2', '', 'Why this projection'));
-    wc.appendChild(h('p', 'mm-why-head', WY.headline));
-    const ul = h('ul');
-    for (let i = 1; i <= 8; i++) { const t = WY['w' + i]; if (!t) continue; const li = h('li', 'tone-' + (WY['t' + i] || 'info'), t); ul.appendChild(li); }
-    wc.appendChild(ul);
-    wc.appendChild(h('p', 'mm-why-key', 'Green pushes his projection up, red pulls it down, gold is a heads-up. Biggest factors first.'));
-    el.appendChild(wc);
-  }
   const grid = h('div', 'mm-pf-grid'); el.appendChild(grid);
   // --- this week's props
   const card = (title, note) => { const c = h('div', 'mm-card'); c.appendChild(h('h2', '', title)); if (note) c.appendChild(h('p', 'mm-note', note)); grid.appendChild(c); return c; };
@@ -2242,6 +2232,17 @@ dash.draw('pl_profile', (el) => {
       tr.append(h('td', 'num', fmt(st, r.neutral)), h('td', 'num g', fmt(st, r.week)), h('td', 'num ' + (eff >= 0.02 ? 'mm-tier-soft' : eff <= -0.02 ? 'mm-tier-tough' : ''), Math.abs(eff) < 0.005 ? '—' : `${eff > 0 ? '+' : '−'}${Math.abs(eff * 100).toFixed(0)}%`)); tb.appendChild(tr);
     });
     t.appendChild(tb); const sw = h('div', 'mm-scroll'); sw.appendChild(t); c.appendChild(sw);
+  }
+  // --- why this projection
+  const WY = (MM.ok('pl_why') || []).find((r) => r.player === x.player);
+  if (WY && !x.out && !x.bye) {
+    const wc = h('div', 'mm-card mm-why'); wc.appendChild(h('h2', '', 'Why this projection'));
+    wc.appendChild(h('p', 'mm-why-head', WY.headline));
+    const ul = h('ul');
+    for (let i = 1; i <= 8; i++) { const t = WY['w' + i]; if (!t) continue; const li = h('li', 'tone-' + (WY['t' + i] || 'info'), t); ul.appendChild(li); }
+    wc.appendChild(ul);
+    wc.appendChild(h('p', 'mm-why-key', 'Green pushes his projection up, red pulls it down, gold is a heads-up. Biggest factors first.'));
+    grid.appendChild(wc);
   }
   // --- matchup
   const D = MM.ok('dvp'), T = MM.ok('dvp_team');
