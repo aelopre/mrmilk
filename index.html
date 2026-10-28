@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261027224908', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261027225443', IDS = ["book_board", "dvp", "dvp_team", "pl_lines", "pl_log", "pl_role", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -1915,10 +1915,12 @@ window.MMP = (() => {
   const players = () => {
     const P = MM.ok('proj_players'); if (!P) return null;
     const m = new Map(); P.forEach((r) => { if (!m.has(r.player)) m.set(r.player, { player: r.player, team: r.team, pos: r.pos, opp: r.opp, game: r.game, kickoff: r.kickoff, status: r.status, out: r.projection == null, rows: [] }); const e = m.get(r.player); if (!e.rows.some((q) => q.stat === r.stat)) e.rows.push(r); });
+    // bye-week teams: players with a profile but no game this week
+    (MM.ok('pl_role') || []).forEach((r) => { if (r.bye && !m.has(r.player)) m.set(r.player, { player: r.player, team: r.team, pos: r.pos, opp: null, game: 'Bye', kickoff: r.next_game ? `back Week 9 ${r.next_game}` : 'back next week', status: r.roster_status || 'Active', out: false, bye: true, rows: [] }); });
     return m;
   };
-  let CACHE = null, CSRC = null;
-  const all = () => { const P = MM.ok('proj_players'); if (P !== CSRC) { CSRC = P; CACHE = players(); } return CACHE; };
+  let CACHE = null, CSRC = null, CROLE = null;
+  const all = () => { const P = MM.ok('proj_players'), R = MM.ok('pl_role'); if (P !== CSRC || R !== CROLE) { CSRC = P; CROLE = R; CACHE = players(); } return CACHE; };
   // the line to judge a stat by: a posted sportsbook line if there is one, else just under the median
   function lineFor(name, stat, row) {
     const L = MM.ok('pl_lines'); const b = L && L.find((x) => x.player === name && x.stat === stat);
@@ -2000,7 +2002,7 @@ dash.draw('pl_list', (el) => {
   list.slice(0, 400).forEach((x) => {
     const b = MMP.h('button', 'mm-pl-item pos-' + x.pos); b.type = 'button'; b.setAttribute('aria-current', String(p.pl === x.player));
     const rr = MMP.roleOf(x.player); const jb = MMP.jersey(x.team, rr ? rr.jersey : null, x.pos, 36); jb.classList.add('j');
-    b.append(jb, MMP.h('span', 'n', x.player), MMP.h('span', 'p', x.pos), MMP.h('span', 'm', `${x.team} · ${x.game}${x.out ? ' · out' : ''}`));
+    b.append(jb, MMP.h('span', 'n', x.player), MMP.h('span', 'p', x.pos), MMP.h('span', 'm', x.bye ? `${x.team} · on bye` : `${x.team} · ${x.game}${x.out ? ' · out' : ''}`));
     b.onclick = () => MMP.open(x.player); el.appendChild(b);
   });
 });
@@ -2018,8 +2020,8 @@ dash.draw('pl_profile', (el) => {
   const head = h('div', 'mm-pf-head pos-' + x.pos); head.style.setProperty('--tb', MMP.TB[x.team] || '#152140');
   const back = h('button', 'mm-link mm-pf-back', '← All players'); back.type = 'button'; back.onclick = () => dash.setParams({ pl: null });
   const nm = h('h2', 'mm-pf-name', x.player);
-  const sub = h('div', 'mm-pf-sub'); const chip = h('span', 'mm-team ' + x.team.toLowerCase(), x.team); sub.append(chip, h('span', 'pos', x.pos), h('span', '', `${x.game} · ${x.kickoff}`));
-  const stt = String(x.status || 'Healthy'); const sc = /out|ir/i.test(stt) || x.out ? 'o' : /quest|doubt/i.test(stt) ? 'q' : ''; sub.appendChild(h('span', 'mm-pf-status ' + sc, x.out && !/out|ir/i.test(stt) ? 'Not expected to play' : stt));
+  const sub = h('div', 'mm-pf-sub'); const chip = h('span', 'mm-team ' + x.team.toLowerCase(), x.team); sub.append(chip, h('span', 'pos', x.pos), h('span', '', x.bye ? `On bye in Week 8 · ${x.kickoff}` : `${x.game} · ${x.kickoff}`));
+  const stt = String(x.status || 'Healthy'); const sc = /out|ir|reserve|inactive/i.test(stt) || x.out ? 'o' : /quest|doubt/i.test(stt) ? 'q' : x.bye ? 'q' : ''; sub.appendChild(h('span', 'mm-pf-status ' + sc, x.bye ? (stt === 'Active' ? 'On bye' : stt) : x.out && !/out|ir/i.test(stt) ? 'Not expected to play' : stt));
   const roles = h('div', 'mm-pf-roles');
   const role = (v, t) => { const s = h('span'); s.appendChild(h('b', '', v)); s.append(t); roles.appendChild(s); };
   if (R) {
@@ -2036,8 +2038,8 @@ dash.draw('pl_profile', (el) => {
   const grid = h('div', 'mm-pf-grid'); el.appendChild(grid);
   // --- this week's props
   const card = (title, note) => { const c = h('div', 'mm-card'); c.appendChild(h('h2', '', title)); if (note) c.appendChild(h('p', 'mm-note', note)); grid.appendChild(c); return c; };
-  const pc1 = card("This week's props", x.out ? 'He is not expected to play, so there are no projections.' : 'Our projection for every stat, judged at the sportsbook line where one is posted (gold) or just under his median otherwise. Tap a row to open it in the Prop explorer.');
-  if (!x.out) {
+  const pc1 = x.bye ? card("This week's props", `His team is on bye in Week 8, so there are no props or projections this week. They're back ${x.kickoff.replace('back ', '')}, and his projections will show up with the Week 9 slate.`) : card("This week's props", x.out ? 'He is not expected to play, so there are no projections.' : 'Our projection for every stat, judged at the sportsbook line where one is posted (gold) or just under his median otherwise. Tap a row to open it in the Prop explorer.');
+  if (!x.out && !x.bye) {
     const lad = MM.ok('proj_ladders'); const board = MM.ok('book_board') || [], thu = MM.ok('thu_picks') || [];
     const t = h('table', 'mm-table mm-pf-props'); const hr = h('tr'); ['Stat', 'Proj', 'Line', 'Over', 'Under'].forEach((c, i) => hr.appendChild(h('th', (i ? 'num' : '') + (i === 4 ? ' mm-hide-sm' : ''), c))); hr.appendChild(h('th', 'mm-hide-sm', 'Books'));
     const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
@@ -2095,7 +2097,7 @@ dash.draw('pl_profile', (el) => {
       : x.pos === 'RB' ? [['Car', 'Rush Att'], ['Rush yds', 'Rush Yds'], ['TD', null], ['Tgt', 'Targets'], ['Rec', 'Receptions'], ['Rec yds', 'Rec Yds']]
       : [['Tgt', 'Targets'], ['Rec', 'Receptions'], ['Rec yds', 'Rec Yds'], ['TD', null], ['Car', 'Rush Att']];
     const lines = Object.fromEntries(COLS.filter((c) => c[1]).map(([, s]) => { const r = x.rows.find((q) => q.stat === s); const L = r && !x.out ? MMP.lineFor(x.player, s, r) : null; return [s, L ? L.line : null]; }));
-    lc.appendChild(h('p', 'mm-note', `Every game this season. ${x.out ? '' : "Green beat this week's line for that stat (shown in the header), red fell short."}`));
+    lc.appendChild(h('p', 'mm-note', `Every game this season. ${x.out || x.bye ? '' : "Green beat this week's line for that stat (shown in the header), red fell short."}`));
     const t = h('table', 'mm-table mm-pf-log'); const hr = h('tr'); hr.append(h('th', '', 'Wk'), h('th', '', 'Opp'), h('th', 'num mm-hide-sm', 'Snaps'));
     COLS.forEach(([l, s]) => hr.appendChild(h('th', 'num' + (s && lines[s] != null ? ' k' : ''), s && lines[s] != null ? `${l} (${lines[s]})` : l)));
     const thd = h('thead'); thd.appendChild(hr); t.appendChild(thd); const tb = h('tbody');
