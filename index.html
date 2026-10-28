@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028024410', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028024940', IDS = ["book_board", "dvp", "dvp_team", "pl_cb", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -437,6 +437,12 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-pf-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; color: #1A1204; background: var(--mm-gold); vertical-align: 2px; }
 .mm-pf-books { font-size: 12px; color: var(--mm-mut); white-space: nowrap; }
 .mm-pf-grid > .mm-why { grid-column: 1 / -1; }
+/* search boxes: one custom clear (x) inside the box; hide the browser's own */
+.mm-clearwrap { position: relative; display: block; }
+.mm-clearwrap input[type="search"] { width: 100%; box-sizing: border-box; padding-right: 40px; }
+.mm-clearwrap input[type="search"]::-webkit-search-cancel-button, .mm-clearwrap input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+.mm-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(255,255,255,.10); color: var(--mm-txt); font-size: 20px; line-height: 30px; padding: 0; cursor: pointer; text-align: center; }
+.mm-clear:hover { background: rgba(255,255,255,.18); } .mm-clear:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 1px; } .mm-clear[hidden] { display: none; }
 .mm-pf-loghead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .mm-pf-loghead h2 { margin: 0; }
 .mm-pf-logswap { font-size: 14px; }
@@ -1094,25 +1100,42 @@ dash.draw('ex_search_list', (dl) => {
   });
 });
 (() => {
-  const norm = (t) => String(t).toLowerCase().replace(/[^a-z ]/g, '').trim();
-  const pick = (inp, final) => {
-    const P = MM.ok('proj_players'); if (!P) return;
-    const q = inp.value; if (!q) return;
-    const name = q.replace(/\s*\(.*\)\s*$/, '');
-    let hit = P.find((r) => r.player === name);
-    if (!hit && final) {
-      const n = norm(q); if (n.length < 2) return;
-      const words = n.split(' ');
-      const score = (r) => { const p = norm(r.player); if (p === n) return 4; if (p.startsWith(n)) return 3; if (p.split(' ').some((w) => w.startsWith(n))) return 2; if (words.every((w) => p.includes(w))) return 1; return 0; };
-      const best = P.map((r) => [score(r), r]).filter((x) => x[0] > 0).sort((a, b) => b[0] - a[0] || a[1].player.localeCompare(b[1].player))[0];
-      hit = best && best[1];
-    }
-    if (hit) dash.setParams({ ex_game: hit.game, ex_player: hit.player, ex_stat: null, ex_line: null });
-  };
+  // live search for the Prop explorer: your typing stays visible, matches drop down under the box, nothing redraws until you pick one
+  const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '');
   document.querySelectorAll('.mm-ex-search').forEach((inp) => {
-    inp.addEventListener('input', () => pick(inp, false));
-    inp.addEventListener('change', () => pick(inp, true));
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(inp, true); });
+    inp.removeAttribute('list');
+    const wrap = inp.parentElement; wrap.style.position = 'relative';
+    const box = document.createElement('div'); box.className = 'mm-ac'; box.hidden = true; box.setAttribute('role', 'listbox'); wrap.appendChild(box);
+    inp.setAttribute('role', 'combobox'); inp.setAttribute('aria-autocomplete', 'list'); inp.setAttribute('aria-expanded', 'false');
+    let items = [], sel = -1;
+    const players = () => { const P = MM.ok('proj_players'); if (!P) return []; const m = new Map(); P.forEach((r) => { if (!m.has(r.player)) m.set(r.player, r); }); return Array.from(m.values()); };
+    const close = () => { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); sel = -1; };
+    const pick = (r) => { close(); inp.value = r.player; inp.blur(); dash.setParams({ ex_game: r.game, ex_player: r.player, ex_stat: null, ex_line: null }); };
+    const render = () => {
+      const q = norm(inp.value).trim(); box.replaceChildren(); items = [];
+      if (!q) { close(); return; }
+      const score = (n) => { const t = norm(n); if (t === q) return 0; if (t.startsWith(q)) return 1; if (t.split(' ').some((w) => w.startsWith(q))) return 2; if (q.split(' ').every((w) => t.includes(w))) return 3; return 9; };
+      items = players().map((x) => [score(x.player), x]).filter((z) => z[0] < 9).sort((a, b) => a[0] - b[0] || a[1].player.localeCompare(b[1].player)).slice(0, 8).map((z) => z[1]);
+      if (!items.length) { const e = document.createElement('div'); e.className = 'mm-ac-empty'; e.textContent = 'No player matches'; box.appendChild(e); box.hidden = false; return; }
+      items.forEach((x, k) => {
+        const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'mm-ac-item'; bt.setAttribute('role', 'option'); bt.setAttribute('aria-selected', String(k === sel));
+        let j = null; try { const rr = MMP.roleOf(x.player); j = MMP.jersey(x.team, rr ? rr.jersey : null, x.pos, 30); } catch (e) { /* badge optional */ }
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = x.player;
+        const mm = document.createElement('span'); mm.className = 'm'; mm.textContent = `${x.team} · ${x.pos} · ${x.game}`;
+        if (j) bt.append(j); bt.append(n, mm); bt.addEventListener('mousedown', (e) => { e.preventDefault(); pick(x); }); box.appendChild(bt);
+      });
+      box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+    };
+    inp.addEventListener('input', () => { sel = -1; render(); });
+    inp.addEventListener('focus', () => { if (inp.value) render(); });
+    inp.addEventListener('blur', () => setTimeout(close, 120));
+    inp.addEventListener('keydown', (e) => {
+      if (box.hidden && e.key !== 'Enter') return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(items.length - 1, sel + 1); render(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); render(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (!items.length) render(); const x = items[sel >= 0 ? sel : 0]; if (x) pick(x); }
+      else if (e.key === 'Escape') close();
+    });
   });
 })();
 dash.draw('ex_game', (sel) => {
