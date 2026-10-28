@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028095616', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028102551', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_scorers", "slip_weeks", "thu_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
@@ -443,6 +443,12 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 .mm-why-tg { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--mm-line); background: rgba(255,255,255,.06); color: var(--mm-gold); font-size: 22px; line-height: 1; cursor: pointer; flex: none; }
 .mm-why-tg:hover { background: rgba(255,255,255,.12); } .mm-why-tg:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
 .mm-why:not(.open) li.more { display: none; } .mm-why-more { justify-self: start; font-size: 14px; }
+.mm-trk { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--mm-line); } .mm-trk h3 { margin: 0 0 4px; font-size: 16px; }
+.mm-trk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.mm-chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--mm-line); background: rgba(255,255,255,.04); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.mm-chip.on { background: var(--mm-gold); color: #0b1020; border-color: var(--mm-gold); font-weight: 700; } .mm-chip:focus-visible { outline: 2px solid var(--mm-cyan); outline-offset: 2px; }
+.mm-trk-t td.g { color: var(--mm-gold); font-weight: 800; } .mm-trk-wait { opacity: .6; font-style: italic; }
+.mm-trk-close { color: #3fbf7f; font-weight: 800; } .mm-trk-far { color: #e05a5a; font-weight: 800; } .mm-trk-sum { font-size: 13.5px; margin: 8px 0 0; } .mm-trk > .mm-note:last-child { margin-top: 8px; }
 .mm-cons { margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--mm-line); border-left: 4px solid var(--mm-line); background: rgba(255,255,255,.03); }
 .mm-cons.tone-good { border-left-color: var(--mm-gold); } .mm-cons.tone-bad { border-left-color: var(--mm-cyan); }
 .mm-cons-k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; } .mm-cons-v { font-weight: 700; margin-top: 2px; } .mm-cons-s { font-size: 13px; opacity: .85; margin-top: 2px; }
@@ -841,7 +847,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
       <div class="mm-pl-list" data-draw="pl_list" data-source="proj_players" aria-label="Players"></div>
       <div class="mm-pf" data-draw="pl_profile" data-source="pl_log"></div>
     </div>
-    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cons"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
+    <span class="mm-sr" data-draw="pl_probe" data-source="proj_players"></span><span class="mm-sr" data-draw="pl_probe" data-source="proj_ladders"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_role"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_log"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_lines"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_proj"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_why"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cb"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_hist"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_run"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_cons"></span><span class="mm-sr" data-draw="pl_probe" data-source="pl_track"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp"></span><span class="mm-sr" data-draw="pl_probe" data-source="dvp_team"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_median"></span><span class="mm-sr" data-draw="pl_probe" data-source="sim_scorers"></span><span class="mm-sr" data-draw="pl_probe" data-source="book_board"></span><span class="mm-sr" data-draw="pl_probe" data-source="thu_picks"></span>
   </section>
 </div>
 
@@ -2399,6 +2405,46 @@ dash.draw('pl_profile', (el) => {
         sub = Math.abs(CN.gap) < 10 ? 'We basically agree with the experts on him this week.' : `We're ${CN.side} on him than the experts by ${Math.abs(CN.gap)} spots.`;
       }
       bx.append(h('div', 'mm-cons-v', main), h('div', 'mm-cons-s', sub)); c.appendChild(bx);
+    }
+    // --- track record: frozen pre-game projections vs what actually happened
+    const TRK = MM.ok('pl_track') || [];
+    const mine = TRK.filter((r) => r.player === x.player);
+    if (mine.length) {
+      const sec = h('div', 'mm-trk'); sec.appendChild(h('h3', '', 'Our track record'));
+      sec.appendChild(h('p', 'mm-note', 'Every week we lock our projection before kickoff and never change it afterward. Once the game is played, the real result goes next to it, hits and misses alike.'));
+      const main = x.pos === 'QB' ? 'Pass Yds' : x.pos === 'RB' ? 'Rush Yds' : 'Rec Yds';
+      const opts = ['Fantasy pts', main, x.pos === 'QB' ? 'Pass TD' : 'Receptions'].filter((st, i, a) => a.indexOf(st) === i && mine.some((r) => r.stat === st));
+      if (!MMP.trkStat || MMP.trkPlayer !== x.player) { MMP.trkStat = 'Fantasy pts'; MMP.trkPlayer = x.player; }
+      const chips = h('div', 'mm-trk-chips'); const tw = h('div', 'mm-scroll');
+      const TOL = { 'Fantasy pts': 3, 'Pass Yds': 25, 'Rush Yds': 15, 'Rec Yds': 15, 'Receptions': 1.5, 'Pass TD': 0.75 };
+      const fmtv = (st, v) => v == null ? '—' : st.endsWith('Yds') ? d3.format('.0f')(v) : st.endsWith('TD') ? d3.format('.1f')(v) : d3.format('.1f')(v);
+      const draw = () => {
+        chips.replaceChildren(); tw.replaceChildren();
+        opts.forEach((st) => { const b = h('button', 'mm-chip' + (st === MMP.trkStat ? ' on' : ''), st === 'Fantasy pts' ? 'Fantasy pts (PPR)' : st); b.type = 'button'; b.setAttribute('aria-pressed', String(st === MMP.trkStat)); b.onclick = () => { MMP.trkStat = st; draw(); }; chips.appendChild(b); });
+        const st = MMP.trkStat; const rows = mine.filter((r) => r.stat === st).sort((a, b) => b.week - a.week);
+        const t = h('table', 'mm-table mm-trk-t'); const hr = h('tr'); [['Week', ''], ['Opp', ''], ['We projected', 'num'], ['Actual', 'num'], ['Difference', 'num']].forEach(([l, cl]) => hr.appendChild(h('th', cl, l)));
+        const th = h('thead'); th.appendChild(hr); t.appendChild(th); const tb = h('tbody');
+        rows.forEach((r) => {
+          const tr = h('tr'); tr.append(h('td', '', 'Wk ' + r.week), h('td', '', r.opp), h('td', 'num g', fmtv(st, r.proj)));
+          if (r.status === 'pending') { tr.append(h('td', 'num mm-trk-wait', 'after game'), h('td', 'num', '—')); }
+          else if (r.status === 'dnp') { tr.append(h('td', 'num mm-trk-wait', 'didn’t play'), h('td', 'num', '—')); }
+          else {
+            const d = r.actual - r.proj; const tol = Math.max(TOL[st] || 2, Math.abs(r.proj) * 0.25);
+            const cls = Math.abs(d) <= tol ? 'mm-trk-close' : Math.abs(d) > 2 * tol ? 'mm-trk-far' : '';
+            const ds = (d >= 0 ? '+' : '−') + fmtv(st, Math.abs(d));
+            tr.append(h('td', 'num', fmtv(st, r.actual)), h('td', 'num ' + cls, ds));
+          }
+          tb.appendChild(tr);
+        });
+        t.appendChild(tb); tw.appendChild(t);
+      };
+      draw(); sec.append(chips, tw);
+      const done = mine.filter((r) => r.stat === 'Fantasy pts' && r.status === 'final');
+      if (done.length) { const e = done.reduce((a, r) => a + Math.abs(r.actual - r.proj), 0) / done.length; sec.appendChild(h('p', 'mm-trk-sum', `For him we've missed by ${e.toFixed(1)} PPR points per game on average over ${done.length} game${done.length === 1 ? '' : 's'}.`)); }
+      const ALL = TRK.filter((r) => r.player === '__ALL__').sort((a, b) => b.week - a.week)[0];
+      if (ALL) sec.appendChild(h('p', 'mm-trk-sum', `Across all ${ALL.n} players in Week ${ALL.week}, we missed by ${ALL.mae.toFixed(1)} PPR points on average, and ${Math.round(ALL.within5 * 100)}% landed within 5 points of our number.`));
+      sec.appendChild(h('p', 'mm-note', 'Green = within about 25% of our number. Red = off by more than about 50%. + means he beat our projection.'));
+      c.appendChild(sec);
     }
   }
   // --- why this projection
