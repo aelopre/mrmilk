@@ -24,7 +24,7 @@ body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area
 /* Tiny stand-in for the Claude dashboard runtime: loads the JSON datasets, runs the page's draw functions,
    keeps view settings (params) in memory, and reloads itself when a newer build is published. */
 (() => {
-  const BUILD = '20261028174910', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_books", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_proj_model_only", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_picks", "sim_scorers", "slip_weeks", "thu_picks", "top_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
+  const BUILD = '20261028183353', IDS = ["book_board", "dvp", "dvp_run", "dvp_team", "pl_books", "pl_cb", "pl_cons", "pl_hist", "pl_lines", "pl_log", "pl_proj", "pl_proj_model_only", "pl_role", "pl_run", "pl_track", "pl_why", "proj_ladders", "proj_logs", "proj_players", "sim_box", "sim_findings", "sim_games", "sim_ladders", "sim_lines", "sim_live", "sim_margin", "sim_median", "sim_pickdist", "sim_picks", "sim_scorers", "slip_weeks", "thu_picks", "top_picks", "tp_breakdown", "tp_weeks", "wk7_picks"];
   const DATA = {}, ERR = {}, draws = new Map(), mounted = new WeakMap(), calcs = [], onData = [];
   let P = {};
   const render = () => {
